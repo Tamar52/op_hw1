@@ -7,7 +7,7 @@
 #define COMMAND_MAX_ARGS (20)
 #define HISTORY_MAX_RECORDS (50)
 
-
+std::string prompt = "smash";
 
 class Command {
     char* cmd_line_name;
