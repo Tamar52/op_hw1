@@ -4,10 +4,10 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "C:/Users/Tamar/Desktop/hw/op/hw1/Commands.cpp" "C:/Users/Tamar/Desktop/hw/op/hw1/cmake-build-debug/CMakeFiles/hw1.dir/Commands.cpp.obj"
-  "C:/Users/Tamar/Desktop/hw/op/hw1/main.cpp" "C:/Users/Tamar/Desktop/hw/op/hw1/cmake-build-debug/CMakeFiles/hw1.dir/main.cpp.obj"
-  "C:/Users/Tamar/Desktop/hw/op/hw1/signals.cpp" "C:/Users/Tamar/Desktop/hw/op/hw1/cmake-build-debug/CMakeFiles/hw1.dir/signals.cpp.obj"
-  "C:/Users/Tamar/Desktop/hw/op/hw1/smash.cpp" "C:/Users/Tamar/Desktop/hw/op/hw1/cmake-build-debug/CMakeFiles/hw1.dir/smash.cpp.obj"
+  "/home/student/CLionProjects/op_hw1/Commands.cpp" "/home/student/CLionProjects/op_hw1/cmake-build-debug/CMakeFiles/hw1.dir/Commands.cpp.o"
+  "/home/student/CLionProjects/op_hw1/main.cpp" "/home/student/CLionProjects/op_hw1/cmake-build-debug/CMakeFiles/hw1.dir/main.cpp.o"
+  "/home/student/CLionProjects/op_hw1/signals.cpp" "/home/student/CLionProjects/op_hw1/cmake-build-debug/CMakeFiles/hw1.dir/signals.cpp.o"
+  "/home/student/CLionProjects/op_hw1/smash.cpp" "/home/student/CLionProjects/op_hw1/cmake-build-debug/CMakeFiles/hw1.dir/smash.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

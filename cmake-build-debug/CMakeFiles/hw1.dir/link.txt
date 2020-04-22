@@ -1,3 +1,1 @@
-"C:\Program Files\JetBrains\CLion 2018.3.4\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\hw1.dir/objects.a
-C:\Tools\TDM-GCC\bin\ar.exe cr CMakeFiles\hw1.dir/objects.a @CMakeFiles\hw1.dir\objects1.rsp
-C:\Tools\TDM-GCC\bin\g++.exe -g   -Wl,--whole-archive CMakeFiles\hw1.dir/objects.a -Wl,--no-whole-archive  -o hw1.exe -Wl,--out-implib,libhw1.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\hw1.dir\linklibs.rsp
+/usr/bin/c++  -g   CMakeFiles/hw1.dir/main.cpp.o CMakeFiles/hw1.dir/Commands.cpp.o CMakeFiles/hw1.dir/signals.cpp.o CMakeFiles/hw1.dir/smash.cpp.o  -o hw1 
