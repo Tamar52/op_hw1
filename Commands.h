@@ -1,32 +1,37 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <vector>
+#include <string.h>
 #include <string>
+#include <vector>
+
 #define COMMAND_ARGS_MAX_LENGTH (200)
-#define COMMAND_MAX_ARGS (20)
+#define COMMAND_MAX_ARGS (21)
 #define HISTORY_MAX_RECORDS (50)
 
-std::string prompt = "smash";
+
+using namespace std;
 
 class Command {
-    char* cmd_line_name;
-    int num_of_strings;
+    // cmd_line_name; option of the name of command
+    int num_arg; //number of arg in cmd_line
+    string cmd_array[COMMAND_MAX_ARGS]; //array of the arg from cmd_line
  public:
-  Command(const char* cmd_line);
+   explicit Command(const char* cmd_line);
   virtual ~Command();
   virtual void execute() = 0;
-  char* devideCmdLine(const char* cmd_line);
+  int getNumOfArg();
+  string* getCmdArray();
   //virtual void prepare();
   //virtual void cleanup();
   // TODO: Add your extra methods if needed
 };
 
 class BuiltInCommand : public Command {
-    char* cmd_line;
  public:
-  BuiltInCommand(const char* cmd_line);
+  explicit BuiltInCommand(const char* cmd_line) : Command(cmd_line){};
   virtual ~BuiltInCommand() {}
+  virtual bool checkArgInput() = 0; //function to check each command
 };
 
 class ExternalCommand : public Command {
@@ -55,29 +60,33 @@ class RedirectionCommand : public Command {
 };
 
 class ChangeDirCommand : public BuiltInCommand {
-
-  char* oldPwd;
-  ChangeDirCommand(const char* cmd_line, char** plastPwd);
+    string& last_pwd;
+// TODO: Add your data members public:
+    public:
+    ChangeDirCommand(const char* cmd_line, string& plastPwd) :
+            BuiltInCommand(cmd_line), last_pwd(plastPwd){};
   virtual ~ChangeDirCommand() {}
   void execute() override;
+    bool checkArgInput() override;
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
  public:
-  GetCurrDirCommand(const char* cmd_line);
+  GetCurrDirCommand(const char* cmd_line) : BuiltInCommand(cmd_line){};
   virtual ~GetCurrDirCommand() {}
   void execute() override;
+  bool checkArgInput();
 };
 
 class ShowPidCommand : public BuiltInCommand {
  public:
-  ShowPidCommand(const char* cmd_line);
+  ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line){};
   virtual ~ShowPidCommand() {}
   void execute() override;
+    bool checkArgInput();
 };
 
 class JobsList;
-
 class QuitCommand : public BuiltInCommand {
 // TODO: Add your data members public:
   QuitCommand(const char* cmd_line, JobsList* jobs);
@@ -169,12 +178,6 @@ class CopyCommand : public BuiltInCommand {
 
 // TODO: add more classes if needed 
 // maybe chprompt , timeout ?
-class ChpromptCommand : public BuiltInCommand {
-public:
-    ChpromptCommand(const char* cmd_line, JobsList* jobs);
-    virtual ~ChpromptCommand() {}
-    void execute() override;
-};
 
 class SmallShell {
  private:
