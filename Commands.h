@@ -198,4 +198,13 @@ class SmallShell {
   // TODO: add extra methods as needed
 };
 
+
+// TODO: add more classes if needed
+// maybe chprompt , timeout ?
+class ChpromptCommand : public BuiltInCommand {
+public:
+    ChpromptCommand(const char* cmd_line, JobsList* jobs);
+    virtual ~ChpromptCommand() {}
+    void execute() override;
+};
 #endif //SMASH_COMMAND_H_
