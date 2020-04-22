@@ -9,7 +9,7 @@
 #define COMMAND_MAX_ARGS (21)
 #define HISTORY_MAX_RECORDS (50)
 
-
+std::string prompt = "smash"
 using namespace std;
 
 class Command {
@@ -175,6 +175,7 @@ class CopyCommand : public BuiltInCommand {
   virtual ~CopyCommand() {}
   void execute() override;
 };
+
 
 // TODO: add more classes if needed 
 // maybe chprompt , timeout ?
