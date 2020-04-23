@@ -9,7 +9,7 @@
 #define COMMAND_MAX_ARGS (21)
 #define HISTORY_MAX_RECORDS (50)
 
-std::string prompt = "smash"
+std::string prompt = "smash";
 using namespace std;
 
 class Command {

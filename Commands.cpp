@@ -8,6 +8,7 @@
 #include <iomanip>
 #include "Commands.h"
 
+
 #define MAXPATH 4096
 using namespace std;
 
@@ -238,8 +239,8 @@ void ShowPidCommand::execute() {
 
 void RedirectionCommand::execute() {
     //TODO: change to working with string?
-    char* command = getCommand();
-    if (command[1] == '>'){
+    string* command = getCmdArray();
+    if (command[1] == ">"){
         pid_t pid = fork();
         if (pid == 0) {
             close(1);
@@ -265,11 +266,60 @@ void RedirectionCommand::execute() {
 
 void ChpromptCommand::execute() {
     //TODO: change to working with string?
-    char* command = getCommand();
-    if(command[1]){
+    string * command = getCmdArray();
+    if(!command[1].empty()){
         prompt = command[1];
     }
     else{
         prompt = "smash";
+    }
+}
+
+void PipeCommand::execute() {
+    string * command = getCmdArray();
+    if(command[2] == "&"){
+        int fd[2];
+        pipe(fd);
+        if (fork() == 0) {
+            // first child
+            dup2(fd[1],2);
+            close(fd[0]);
+            close(fd[1]);
+            char* args[] ={command[0], nullptr};
+            execv(args[0],args);
+        }
+        if (fork() == 0) {
+            // second child
+            dup2(fd[0],0);
+            close(fd[0]);
+            close(fd[1]);
+            char* args[] ={command[1], nullptr};
+            execv(args[0],args);
+        }
+        close(fd[0]);
+        close(fd[1]);
+    }
+    else{
+        int fd[2];
+        pipe(fd);
+        if (fork() == 0) {
+            // first child
+            dup2(fd[1],1);
+            close(fd[0]);
+            close(fd[1]);
+            char* args[] ={command[0], nullptr};
+            execv(args[0],args);
+        }
+        if (fork() == 0) {
+            // second child
+            dup2(fd[0],0);
+            close(fd[0]);
+            close(fd[1]);
+            char* args[] ={command[1], nullptr};
+            execv(args[0],args);
+        }
+        close(fd[0]);
+        close(fd[1]);
+
     }
 }
