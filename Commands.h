@@ -17,7 +17,7 @@ class Command {
     int num_arg; //number of arg in cmd_line
     string cmd_array[COMMAND_MAX_ARGS]; //array of the arg from cmd_line
  public:
-   explicit Command(const char* cmd_line);
+    explicit Command(const char* cmd_line);
   virtual ~Command();
   virtual void execute() = 0;
   int getNumOfArg();
@@ -36,7 +36,7 @@ class BuiltInCommand : public Command {
 
 class ExternalCommand : public Command {
  public:
-  ExternalCommand(const char* cmd_line);
+  ExternalCommand(const char* cmd_line): Command(cmd_line){};
   virtual ~ExternalCommand() {}
   void execute() override;
 };
@@ -44,7 +44,7 @@ class ExternalCommand : public Command {
 class PipeCommand : public Command {
   // TODO: Add your data members
  public:
-  PipeCommand(const char* cmd_line);
+  PipeCommand(const char* cmd_line): Command(cmd_line){};
   virtual ~PipeCommand() {}
   void execute() override;
 };
@@ -52,11 +52,22 @@ class PipeCommand : public Command {
 class RedirectionCommand : public Command {
  // TODO: Add your data members
  public:
-  explicit RedirectionCommand(const char* cmd_line);
+  explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){};
   virtual ~RedirectionCommand() {}
   void execute() override;
   //void prepare() override;
   //void cleanup() override;
+};
+
+
+//TODO: is it really a builtincommand?
+class CopyCommand : public BuiltInCommand {
+    // TODO: Add your data members
+public:
+    CopyCommand(const char* cmd_line): BuiltInCommand(cmd_line){};
+    virtual ~CopyCommand() {}
+    void execute() override;
+    bool checkArgInput() override;
 };
 
 class ChangeDirCommand : public BuiltInCommand {
@@ -65,8 +76,8 @@ class ChangeDirCommand : public BuiltInCommand {
     public:
     ChangeDirCommand(const char* cmd_line, string& plastPwd) :
             BuiltInCommand(cmd_line), last_pwd(plastPwd){};
-  virtual ~ChangeDirCommand() {}
-  void execute() override;
+    virtual ~ChangeDirCommand() {}
+    void execute() override;
     bool checkArgInput() override;
 };
 
@@ -75,7 +86,7 @@ class GetCurrDirCommand : public BuiltInCommand {
   GetCurrDirCommand(const char* cmd_line) : BuiltInCommand(cmd_line){};
   virtual ~GetCurrDirCommand() {}
   void execute() override;
-  bool checkArgInput();
+  bool checkArgInput()override ;
 };
 
 class ShowPidCommand : public BuiltInCommand {
@@ -83,7 +94,7 @@ class ShowPidCommand : public BuiltInCommand {
   ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line){};
   virtual ~ShowPidCommand() {}
   void execute() override;
-    bool checkArgInput();
+  bool checkArgInput()override ;
 };
 
 class JobsList;
@@ -94,26 +105,6 @@ class QuitCommand : public BuiltInCommand {
   void execute() override;
 };
 
-class CommandsHistory {
- protected:
-  class CommandHistoryEntry {
-	  // TODO: Add your data members
-  };
- // TODO: Add your data members
- public:
-  CommandsHistory();
-  ~CommandsHistory() {}
-  void addRecord(const char* cmd_line);
-  void printHistory();
-};
-
-class HistoryCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  HistoryCommand(const char* cmd_line, CommandsHistory* history);
-  virtual ~HistoryCommand() {}
-  void execute() override;
-};
 
 class JobsList {
  public:
@@ -167,18 +158,15 @@ class BackgroundCommand : public BuiltInCommand {
   void execute() override;
 };
 
-
-// TODO: should it really inhirit from BuiltInCommand ?
-class CopyCommand : public BuiltInCommand {
- public:
-  CopyCommand(const char* cmd_line);
-  virtual ~CopyCommand() {}
-  void execute() override;
-};
-
-
-// TODO: add more classes if needed 
+// TODO: add more classes if needed
 // maybe chprompt , timeout ?
+class ChpromptCommand : public BuiltInCommand {
+public:
+    ChpromptCommand(const char* cmd_line): BuiltInCommand(cmd_line){};
+    virtual ~ChpromptCommand() {}
+    void execute() override;
+    bool checkArgInput() override;
+};
 
 class SmallShell {
  private:
@@ -200,12 +188,5 @@ class SmallShell {
 };
 
 
-// TODO: add more classes if needed
-// maybe chprompt , timeout ?
-class ChpromptCommand : public BuiltInCommand {
-public:
-    ChpromptCommand(const char* cmd_line, JobsList* jobs);
-    virtual ~ChpromptCommand() {}
-    void execute() override;
-};
+
 #endif //SMASH_COMMAND_H_

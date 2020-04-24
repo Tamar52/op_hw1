@@ -90,9 +90,6 @@
 		<Unit filename="/home/student/CLionProjects/op_hw1/Commands.h">
 			<Option target="hw1"/>
 		</Unit>
-		<Unit filename="/home/student/CLionProjects/op_hw1/main.cpp">
-			<Option target="hw1"/>
-		</Unit>
 		<Unit filename="/home/student/CLionProjects/op_hw1/signals.cpp">
 			<Option target="hw1"/>
 		</Unit>

@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
+#include <fcntl.h>
 
 
 #define MAXPATH 4096
@@ -237,14 +238,23 @@ void ShowPidCommand::execute() {
   cout << "smash pid is " << to_string(pid) << endl;
 }
 
+//TODO: understand how to cast the string to char* for execv
 void RedirectionCommand::execute() {
-    //TODO: change to working with string?
     string* command = getCmdArray();
     if (command[1] == ">"){
         pid_t pid = fork();
+        if(pid<0){
+            perror("smash error: fork failed");
+        }
         if (pid == 0) {
+            setpgrp();
             close(1);
-            open(command[2], O_WRONLY|O_CREAT,666 );
+            mode_t mode = 0666;
+            int write_fd = open(command[2], O_WRONLY|O_CREAT, mode);
+            if (write_fd == -1) { /* Check if file opened */
+                perror("smash error: open failed");
+
+            }
             char* args[] ={command[0], nullptr};
             execv(args[0],args);
         } else {
@@ -253,9 +263,18 @@ void RedirectionCommand::execute() {
 
     } else{
         pid_t pid = fork();
+        if(pid<0){
+            perror("smash error: fork failed");
+        }
         if (pid == 0) {
+            setpgrp();
             close(1);
-            open(command[2], O_APPEND|O_CREAT, 666);
+            mode_t mode = 0666;
+            int write_fd = open(command[2], O_APPEND|O_CREAT, mode);
+            if (write_fd == -1) { /* Check if file opened */
+                perror("smash error: open failed");
+
+            }
             char* args[] ={command[0], nullptr};
             execv(args[0],args);
         } else {
@@ -265,7 +284,6 @@ void RedirectionCommand::execute() {
 }
 
 void ChpromptCommand::execute() {
-    //TODO: change to working with string?
     string * command = getCmdArray();
     if(!command[1].empty()){
         prompt = command[1];
@@ -275,51 +293,129 @@ void ChpromptCommand::execute() {
     }
 }
 
+//TODO: understand how to cast the string to char* for execv
 void PipeCommand::execute() {
     string * command = getCmdArray();
     if(command[2] == "&"){
         int fd[2];
         pipe(fd);
-        if (fork() == 0) {
+        pid_t child1 = fork();
+        if(child1<0){
+            perror("smash error: fork failed");
+        }
+        if (child1 == 0) {
             // first child
+            setpgrp();
             dup2(fd[1],2);
             close(fd[0]);
             close(fd[1]);
             char* args[] ={command[0], nullptr};
             execv(args[0],args);
         }
-        if (fork() == 0) {
+
+        pid_t child2 = fork();
+        if(child2<0){
+            perror("smash error: fork failed");
+        }
+        if (child2 == 0) {
             // second child
+            setpgrp();
             dup2(fd[0],0);
             close(fd[0]);
             close(fd[1]);
-            char* args[] ={command[1], nullptr};
+            char* args[] ={command[2], nullptr};
             execv(args[0],args);
         }
+
         close(fd[0]);
         close(fd[1]);
     }
     else{
         int fd[2];
         pipe(fd);
-        if (fork() == 0) {
+        pid_t child1 = fork();
+        if(child1<0){
+            perror("smash error: fork failed");
+        }
+        if (child1 == 0) {
             // first child
+            setpgrp();
             dup2(fd[1],1);
             close(fd[0]);
             close(fd[1]);
             char* args[] ={command[0], nullptr};
             execv(args[0],args);
         }
-        if (fork() == 0) {
+
+        pid_t child2 = fork();
+        if(child2<0){
+            perror("smash error: fork failed");
+        }
+        if (child2 == 0) {
             // second child
+            setpgrp();
             dup2(fd[0],0);
             close(fd[0]);
             close(fd[1]);
             char* args[] ={command[1], nullptr};
-            execv(args[0],args);
+            execv(command[1],args);
         }
+
         close(fd[0]);
         close(fd[1]);
 
     }
 }
+
+void CopyCommand::execute() {
+    //TODO: check if this is the right way of doing this- i used a pipe + should we close both files we've open?
+    string * command = getCmdArray();
+    int read_fd;
+    int write_fd;
+    char buffer[1024];
+    ssize_t count;
+    read_fd = open(command[0], O_RDONLY);
+    if (read_fd == -1) { /* Check if file opened */
+        perror("smash error: open failed");
+
+    }
+    //TODO: are these neede? - S_IRUSR | S_IWUSR
+    mode_t mode = 0666;
+    write_fd = open(command[2], O_WRONLY | O_CREAT ,mode);
+    if (write_fd == -1) /* Check if file opened*/
+        {
+            close(read_fd);
+            perror("smash error: open failed");
+        }
+    while ((count = read(read_fd, buffer, sizeof(buffer))) != 0){
+         write(write_fd, buffer, count);
+
+    }
+
+}
+
+//TODO: understand how to cast the string to char* for execv
+void ExternalCommand::execute() {
+    string *command = getCmdArray();
+    pid_t pid = fork();
+    if(pid<0){
+        perror("smash error: fork failed");
+    }
+    if (pid > 0) {
+        // smash waits for child
+        wait(NULL);
+    }
+    if(pid == 0){
+        string bash_command = "/bin/bash" + command[0];
+        command[0] = " "
+        execv( bash_command,(char*)command);
+    }
+
+
+}
+
+
+
+
+
+

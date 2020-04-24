@@ -150,33 +150,6 @@ Commands.cpp.s:
 	$(MAKE) -f CMakeFiles/hw1.dir/build.make CMakeFiles/hw1.dir/Commands.cpp.s
 .PHONY : Commands.cpp.s
 
-main.o: main.cpp.o
-
-.PHONY : main.o
-
-# target to build an object file
-main.cpp.o:
-	$(MAKE) -f CMakeFiles/hw1.dir/build.make CMakeFiles/hw1.dir/main.cpp.o
-.PHONY : main.cpp.o
-
-main.i: main.cpp.i
-
-.PHONY : main.i
-
-# target to preprocess a source file
-main.cpp.i:
-	$(MAKE) -f CMakeFiles/hw1.dir/build.make CMakeFiles/hw1.dir/main.cpp.i
-.PHONY : main.cpp.i
-
-main.s: main.cpp.s
-
-.PHONY : main.s
-
-# target to generate assembly for a file
-main.cpp.s:
-	$(MAKE) -f CMakeFiles/hw1.dir/build.make CMakeFiles/hw1.dir/main.cpp.s
-.PHONY : main.cpp.s
-
 signals.o: signals.cpp.o
 
 .PHONY : signals.o
@@ -243,9 +216,6 @@ help:
 	@echo "... Commands.o"
 	@echo "... Commands.i"
 	@echo "... Commands.s"
-	@echo "... main.o"
-	@echo "... main.i"
-	@echo "... main.s"
 	@echo "... signals.o"
 	@echo "... signals.i"
 	@echo "... signals.s"
