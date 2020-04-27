@@ -5,6 +5,8 @@
 #include "Commands.h"
 #include "signals.h"
 
+std::string prompt_message = "smash";
+
 int main(int argc, char* argv[]) {
     if(signal(SIGTSTP , ctrlZHandler)==SIG_ERR) {
         perror("smash error: failed to set ctrl-Z handler");
@@ -17,8 +19,7 @@ int main(int argc, char* argv[]) {
 
     SmallShell& smash = SmallShell::getInstance();
     while(true) {
-        std::cout << prompt << ">"; // TODO: change this (why?)- i changed
-        // but i am not sure this is the idea
+        std::cout << prompt_message << ">";
         std::string cmd_line;
         std::getline(std::cin, cmd_line);
         smash.executeCommand(cmd_line.c_str());
