@@ -19,7 +19,9 @@ class Command {
     // cmd_line_name; option of the name of command
     int num_arg; //number of arg in cmd_line
     string cmd_array[COMMAND_MAX_ARGS]; //array of the arg from cmd_line
+
 public:
+    const char* cmd_line; // original cmd_line
     explicit Command(const char* cmd_line);
     virtual ~Command();
     virtual void execute() = 0;
@@ -207,6 +209,7 @@ private:
     // TODO: Add your data members
     shared_ptr<ChangeDirCommand> change_dir;
     JobsList* jobs;
+    string cmd_name;
     SmallShell(){
         shared_ptr<JobsList> jobs = make_shared<JobsList>();
         shared_ptr<ChangeDirCommand>  change_dir = nullptr;
