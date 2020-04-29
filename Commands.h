@@ -111,7 +111,7 @@ class QuitCommand : public BuiltInCommand {
 public:
     QuitCommand(const char* cmd_line, JobsList* jobs) :
             BuiltInCommand(cmd_line),jobs(jobs){};
-    ~QuitCommand() override = default;
+    virtual ~QuitCommand()  = default;
     void execute() override;
     bool checkArgInput();
 };
@@ -133,8 +133,10 @@ public:
     int getJobPid();
     JobStatus getJobStatus();
     JobStatus getJobLastStatus();
-    time_t getTime() { return 2;};
-//    void resetTime();
+    void changeStatusOfJob(JobStatus status);
+    void changeLastStatusOfJob(JobStatus last_status);
+    time_t getTime();
+    void resetTime();
     string getInputCmd();
     ~JobEntry() = default;
 };
@@ -153,8 +155,8 @@ public:
     void removeFinishedJobs();
     JobEntry * getJobById(int jobId);
     void removeJobById(int jobId);
-    JobEntry * getLastJob(int* lastJobId);
-    JobEntry *getLastStoppedJob(int *jobId);
+    JobEntry * getLastJob();
+    JobEntry *getLastStoppedJob();
     // TODO: Add extra methods or modify exisitng ones as needed
 };
 
@@ -163,7 +165,7 @@ class JobsCommand : public BuiltInCommand {
     JobsList& jobs;
 public:
     JobsCommand(const char* cmd_line, JobsList& jobs) : BuiltInCommand(cmd_line),jobs(jobs){};
-    ~JobsCommand() override = default;
+    virtual ~JobsCommand() {}
     void execute() override;
     bool checkArgInput() override;
 };
@@ -173,25 +175,31 @@ class KillCommand : public BuiltInCommand {
     JobsList* jobs;
 public:
     KillCommand(const char* cmd_line, JobsList* jobs) : BuiltInCommand(cmd_line), jobs(jobs){};
-    ~KillCommand() override = default;
+    virtual ~KillCommand() = default;
     void execute() override;
     bool checkArgInput() override;
 };
 
 class ForegroundCommand : public BuiltInCommand {
     // TODO: Add your data members
+    JobsList* jobs;
 public:
-    ForegroundCommand(const char* cmd_line, JobsList* jobs);
-    ~ForegroundCommand() override = default;
+    ForegroundCommand(const char* cmd_line, JobsList* jobs) :
+            BuiltInCommand(cmd_line), jobs(jobs){};
+    virtual ~ForegroundCommand() = default;
     void execute() override;
+    bool checkArgInput();
 };
 
 class BackgroundCommand : public BuiltInCommand {
     // TODO: Add your data members
+    JobsList* jobs;
 public:
-    BackgroundCommand(const char* cmd_line, JobsList* jobs);
-    ~BackgroundCommand() override = default;
+    BackgroundCommand(const char* cmd_line, JobsList* jobs) :
+            BuiltInCommand(cmd_line),jobs(jobs){};
+    virtual ~BackgroundCommand() = default;
     void execute() override;
+    bool checkArgInput();
 };
 
 // TODO: add more classes if needed
