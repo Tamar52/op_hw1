@@ -47,9 +47,11 @@ public:
 };
 
 class PipeCommand : public Command {
-    // TODO: Add your data members
+    int std_err_indicator;
 public:
-    explicit PipeCommand(const char* cmd_line): Command(cmd_line){};
+    explicit PipeCommand(const char* cmd_line, int std_err): Command(cmd_line){
+        std_err_indicator = std_err;
+    };
     ~PipeCommand() override = default;
     void execute() override;
 };

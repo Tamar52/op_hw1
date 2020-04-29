@@ -103,6 +103,13 @@ int _parseCommandLine(const string& cmd_line, string args[]) {
    */
     FUNC_EXIT()
 }
+void _parseCommandLineByChar(const string& cmd_line, string args[], char sign) {
+    FUNC_ENTRY()
+    int i = 0;
+    std::istringstream iss(cmd_line.c_str());
+    string intermediate, first;
+    while (getline(iss, intermediate, sign)) { args[i++] = intermediate; }
+}
 
 bool _isBackgroundComamnd(const char* cmd_line) {
     const string str(cmd_line);
@@ -214,84 +221,18 @@ shared_ptr<Command> SmallShell::CreateCommand(const char* cmd_line) {
 void SmallShell::executeCommand(const char *cmd_line) {
     shared_ptr<Command> cmd = CreateCommand(cmd_line);
     string* command = cmd->getCmdArray();
-    if(command[1] == "|") {
-        shared_ptr<Command> cmd_2 = CreateCommand(command[2].c_str());
-        if (command[2] == "&") {
-            int fd[2];
-            pipe(fd);
-            pid_t child1 = fork();
-            if (child1 < 0) {
-                perror("smash error: fork failed");
-                return;
-            }
-            if (child1 == 0) {
-                // first child
-                setpgrp();
-                dup2(fd[1], 2);
-                close(fd[0]);
-                close(fd[1]);
-                cmd->execute();
-                exit(0);
-            }
-            pid_t child2 = fork();
-            if (child2 < 0) {
-                perror("smash error: fork failed");
-                return;
-            }
-            if (child2 == 0) {
-                // second child
-                setpgrp();
-                dup2(fd[0], 0);
-                close(fd[0]);
-                close(fd[1]);
-                cmd_2->execute();
-                exit(0);
-            }
+    int array_size = cmd->getNumOfArg();
+    if(_isCharInComamnd(cmd_line, "|")) {
 
-            close(fd[0]);
-            close(fd[1]);
-        }else{
-            int fd[2];
-            pipe(fd);
-            pid_t child1 = fork();
-            if(child1<0){
-                perror("smash error: fork failed");
-                return;
-            }
-            if (child1 == 0) {
-                // first child
-                setpgrp();
-                dup2(fd[1],1);
-                close(fd[0]);
-                close(fd[1]);
-                cmd->execute();
-                exit(0);
-            }
-
-            pid_t child2 = fork();
-            if(child2<0){
-                perror("smash error: fork failed");
-                return;
-            }
-            if (child2 == 0) {
-                // second child
-                setpgrp();
-                dup2(fd[0],0);
-                close(fd[0]);
-                close(fd[1]);
-                cmd_2->execute();
-                exit(0);
-            }
-
-            close(fd[0]);
-            close(fd[1]);
+        //TODO: ADD PARENT CODE
+        if (_isCharInComamnd(cmd_line, "&")){
+            shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line,1);
+            pipe->execute();
+        }else {
+            shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
+            pipe->execute();
         }
-
-
-
     }else if (_isCharInComamnd(cmd->cmd_line.c_str(), ">")) {
-        string * command_array = cmd->getCmdArray();
-        int array_size = cmd->getNumOfArg();
         char cmd_temp[(cmd->cmd_line).length()];
         strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
         int indicator = _removeChar(cmd_temp, '>');
@@ -306,13 +247,13 @@ void SmallShell::executeCommand(const char *cmd_line) {
              }
             if (pid == 0) {
                 setpgrp();
-                shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1, command_array[array_size-1]);
+                shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1, command[array_size-1]);
                 rd->execute();
                 cmd->cmd_line = input;
-                size_t pos = cmd->cmd_line.find(command_array[array_size-1]);
+                size_t pos = cmd->cmd_line.find(command[array_size-1]);
                 if (pos != std::string::npos)
                 {
-                    cmd->cmd_line.erase(pos, command_array[array_size-1].length());
+                    cmd->cmd_line.erase(pos, command[array_size-1].length());
                 }
                 cmd->execute();
                 exit(0);
@@ -328,13 +269,13 @@ void SmallShell::executeCommand(const char *cmd_line) {
             }
             if (pid == 0) {
                 setpgrp();
-                shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2, command_array[array_size-1]);
+                shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2, command[array_size-1]);
                 rd->execute();
                 cmd->cmd_line = input;
-                size_t pos = cmd->cmd_line.find(command_array[array_size-1]);
+                size_t pos = cmd->cmd_line.find(command[array_size-1]);
                 if (pos != std::string::npos)
                 {
-                    cmd->cmd_line.erase(pos, command_array[array_size-1].length());
+                    cmd->cmd_line.erase(pos, command[array_size-1].length());
                 }
                 cmd->execute();
                 exit(0);
@@ -472,10 +413,15 @@ void ChpromptCommand::execute() {
     }
 }
 
-//TODO: understand how to cast the string to char* for execv
+
 void PipeCommand::execute() {
-    string * command = getCmdArray();
-    if(command[2] == "&"){
+    string cmd_temp_array[COMMAND_MAX_ARGS];
+
+    if(std_err_indicator == 1){
+        char cmd_temp[(cmd_line).length()];
+        strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
+        _removeChar(cmd_temp,'|');
+        _parseCommandLineByChar(cmd_line, cmd_temp_array, '&');
         int fd[2];
         pipe(fd);
         pid_t child1 = fork();
@@ -486,11 +432,11 @@ void PipeCommand::execute() {
         if (child1 == 0) {
             // first child
             setpgrp();
-            dup2(fd[1],2);
             close(fd[0]);
+            dup2(fd[1],2);
             close(fd[1]);
-            char* args[] ={const_cast<char *>(command[0].c_str()), nullptr};
-            execv(args[0],args);
+            SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
+            exit(0);
         }
 
         pid_t child2 = fork();
@@ -501,17 +447,18 @@ void PipeCommand::execute() {
         if (child2 == 0) {
             // second child
             setpgrp();
-            dup2(fd[0],0);
             close(fd[0]);
+            dup2(fd[0],0);
             close(fd[1]);
-            char* args[] ={const_cast<char *>(command[2].c_str()), nullptr};
-            execv(args[0],args);
+            SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
+            exit(0);
         }
 
         close(fd[0]);
         close(fd[1]);
     }
     else{
+        _parseCommandLineByChar(cmd_line, cmd_temp_array, '|');
         int fd[2];
         pipe(fd);
         pid_t child1 = fork();
@@ -522,11 +469,11 @@ void PipeCommand::execute() {
         if (child1 == 0) {
             // first child
             setpgrp();
-            dup2(fd[1],1);
             close(fd[0]);
+            dup2(fd[1],1);
             close(fd[1]);
-            char* args[] ={const_cast<char *>(command[0].c_str()), nullptr};
-            execv(args[0],args);
+            SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
+            exit(0);
         }
 
         pid_t child2 = fork();
@@ -537,11 +484,11 @@ void PipeCommand::execute() {
         if (child2 == 0) {
             // second child
             setpgrp();
-            dup2(fd[0],0);
             close(fd[0]);
+            dup2(fd[0],0);
             close(fd[1]);
-            char* args[] ={const_cast<char *>(command[1].c_str()), nullptr};
-            execv(args[0],args);
+            SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
+            exit(0);
         }
 
         close(fd[0]);
@@ -635,7 +582,6 @@ void CopyCommand::execute() {
 
 }
 
-//TODO: understand why only ls works
 void ExternalCommand::execute() {
     char cmd_temp[(cmd_line).length()];
     strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
