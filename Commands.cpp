@@ -223,15 +223,51 @@ void SmallShell::executeCommand(const char *cmd_line) {
     string* command = cmd->getCmdArray();
     int array_size = cmd->getNumOfArg();
     if(_isCharInComamnd(cmd_line, "|")) {
-
-        //TODO: ADD PARENT CODE
-        if (_isCharInComamnd(cmd_line, "&")){
-            shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line,1);
-            pipe->execute();
-        }else {
-            shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
-            pipe->execute();
+        if (_isBackgroundComamnd(cmd_line)) {
+//            pid_t pid = fork();
+//            if (pid == 0) {
+//                setpgrp();
+//                char cmd_temp[(cmd->cmd_line).length()];
+//                strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
+//                _removeBackgroundSign(cmd_temp);
+//                if (_isCharInComamnd(cmd_line, "&")){
+//                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_temp,1);
+//                    pipe->execute();
+//                }else {
+//                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
+//                    pipe->execute();
+//                }
+//
+//            }
+//            if (pid < 0) {
+//                perror("smash error: fork failed");
+//                return;
+//            } else {
+//                //TODO: DELETE THE WAIT AND ADD TO JOB LIST
+//                wait(nullptr);
+//            }
+        } else {
+            pid_t pid = fork();
+            if (pid > 0) {
+                // smash waits for child
+                wait(nullptr);
+            }
+            if (pid < 0) {
+                perror("smash error: fork failed");
+                return;
+            }
+            if (pid == 0) {
+                setpgrp();
+                if (_isCharInComamnd(cmd_line, "&")) {
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 1);
+                    pipe->execute();
+                } else {
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
+                    pipe->execute();
+                }
+            }
         }
+
     }else if (_isCharInComamnd(cmd->cmd_line.c_str(), ">")) {
         char cmd_temp[(cmd->cmd_line).length()];
         strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
@@ -421,7 +457,7 @@ void PipeCommand::execute() {
         char cmd_temp[(cmd_line).length()];
         strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
         _removeChar(cmd_temp,'|');
-        _parseCommandLineByChar(cmd_line, cmd_temp_array, '&');
+        _parseCommandLineByChar(cmd_temp, cmd_temp_array, '&');
         int fd[2];
         pipe(fd);
         pid_t child1 = fork();
@@ -447,15 +483,16 @@ void PipeCommand::execute() {
         if (child2 == 0) {
             // second child
             setpgrp();
-            close(fd[0]);
-            dup2(fd[0],0);
             close(fd[1]);
+            dup2(fd[0],0);
+            close(fd[0]);
             SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
             exit(0);
         }
 
         close(fd[0]);
         close(fd[1]);
+        while(wait(NULL)>0);
     }
     else{
         _parseCommandLineByChar(cmd_line, cmd_temp_array, '|');
@@ -484,16 +521,15 @@ void PipeCommand::execute() {
         if (child2 == 0) {
             // second child
             setpgrp();
-            close(fd[0]);
-            dup2(fd[0],0);
             close(fd[1]);
+            dup2(fd[0],0);
+            close(fd[0]);
             SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
             exit(0);
         }
-
         close(fd[0]);
         close(fd[1]);
-
+        while(wait(NULL)>0);
     }
 }
 
