@@ -142,6 +142,7 @@ public:
     JobStatus getJobLastStatus();
     void changeStatusOfJob(JobStatus status);
     void changeLastStatusOfJob(JobStatus last_status);
+
     time_t getTime();
     void resetTime();
     string getInputCmd();
@@ -155,7 +156,7 @@ public:
     JobsList() = default;
     ~JobsList() = default;
     void addJob(string input_cmd, int job_pid, JobStatus job_status);
-
+    JobEntry* getJobWithStatusForegroind();
     void updateJobsStatus();
     void printJobsList();
     void killAllJobs();
@@ -169,7 +170,7 @@ public:
 
 class JobsCommand : public BuiltInCommand {
     // TODO: Add your data members
-    JobsList& jobs;
+    JobsList jobs;
 public:
     JobsCommand(const char* cmd_line, JobsList& jobs) : BuiltInCommand(cmd_line),jobs(jobs){};
     virtual ~JobsCommand() {}
@@ -179,9 +180,9 @@ public:
 
 class KillCommand : public BuiltInCommand {
     // TODO: Add your data members
-    JobsList* jobs;
+    JobsList jobs;
 public:
-    KillCommand(const char* cmd_line, JobsList* jobs) : BuiltInCommand(cmd_line), jobs(jobs){};
+    KillCommand(const char* cmd_line, JobsList& jobs) : BuiltInCommand(cmd_line), jobs(jobs){};
     virtual ~KillCommand() = default;
     void execute() override;
     bool checkArgInput() override;
@@ -189,9 +190,9 @@ public:
 
 class ForegroundCommand : public BuiltInCommand {
     // TODO: Add your data members
-    JobsList* jobs;
+    JobsList jobs;
 public:
-    ForegroundCommand(const char* cmd_line, JobsList* jobs) :
+    ForegroundCommand(const char* cmd_line, JobsList& jobs) :
             BuiltInCommand(cmd_line), jobs(jobs){};
     virtual ~ForegroundCommand() = default;
     void execute() override;
@@ -200,9 +201,9 @@ public:
 
 class BackgroundCommand : public BuiltInCommand {
     // TODO: Add your data members
-    JobsList* jobs;
+    JobsList jobs;
 public:
-    BackgroundCommand(const char* cmd_line, JobsList* jobs) :
+    BackgroundCommand(const char* cmd_line, JobsList& jobs) :
             BuiltInCommand(cmd_line),jobs(jobs){};
     virtual ~BackgroundCommand() = default;
     void execute() override;
@@ -223,11 +224,11 @@ class SmallShell {
 private:
     // TODO: Add your data members
     shared_ptr<ChangeDirCommand> change_dir;
-//    JobsList* jobs;
-    string cmd_name;
+    shared_ptr<JobsList> job_list;
+//    string cmd_name;
     SmallShell(){
-//        shared_ptr<JobsList> jobs = make_shared<JobsList>();
-        shared_ptr<ChangeDirCommand>  change_dir = nullptr;
+          job_list = make_shared<JobsList>();
+          change_dir = nullptr;
     }
 public:
     std::shared_ptr<Command> CreateCommand(const char* cmd_line);
@@ -240,11 +241,11 @@ public:
         // Instantiated on first use.
         return instance;
     }
+    shared_ptr<JobsList> get_job_list(){return job_list;};
     ~SmallShell(){}
-    void executeCommand(const char* cmd_line);
+    bool executeCommand(const char* cmd_line);
     // TODO: add extra methods as needed
 };
-
 
 
 #endif //SMASH_COMMAND_H_

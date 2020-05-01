@@ -190,20 +190,20 @@ shared_ptr<Command> SmallShell::CreateCommand(const char* cmd_line) {
       }
       return change_dir;
   }
-//  else if(cmd_s.find("jobs") == 0){
-//      return new JobsCommand(cmd_line);
-//  }
-//  else if(cmd_s.find("kill") == 0){
-//      return new KillCommand(cmd_line);
-//  }
-//  else if(cmd_s.find("fg") == 0){
-//      return new ForegroundCommand(cmd_line);
-//  }
-//  else if(cmd_s.find("bg") == 0){
-//      return new BackgroundCommand(cmd_line);
-//  }
+  else if(cmd_s.find("jobs") == 0){
+      return make_shared<JobsCommand>(cmd_line, *job_list);
+  }
+  else if(cmd_s.find("kill") == 0){
+      return make_shared<KillCommand>(cmd_line, *job_list);
+  }
+  else if(cmd_s.find("fg") == 0){
+      return make_shared<ForegroundCommand>(cmd_line, *job_list);
+  }
+  else if(cmd_s.find("bg") == 0){
+      return make_shared<BackgroundCommand>(cmd_line, *job_list);
+  }
 //  else if(cmd_s.find("quit") == 0){
-//      return new QuitCommand(cmd_line);
+//      return make_shared<QuitCommand>(cmd_line, *job_list);
 //  }
   else if(cmd_s.find("cp") == 0){
       return make_shared<CopyCommand>(cmd_line);
@@ -211,50 +211,52 @@ shared_ptr<Command> SmallShell::CreateCommand(const char* cmd_line) {
   //TODO: add a condition for timeout!
 
   else {
-      cmd_name = "External";
+//      cmd_name == "External";
     return make_shared<ExternalCommand>(cmd_line);
   }
 
     return nullptr;
 }
 
-void SmallShell::executeCommand(const char *cmd_line) {
+bool SmallShell::executeCommand(const char *cmd_line) {
+    job_list->removeFinishedJobs();
+    job_list->updateJobsStatus();
     shared_ptr<Command> cmd = CreateCommand(cmd_line);
     string* command = cmd->getCmdArray();
     int array_size = cmd->getNumOfArg();
     if(_isCharInComamnd(cmd_line, "|")) {
         if (_isBackgroundComamnd(cmd_line)) {
-//            pid_t pid = fork();
-//            if (pid == 0) {
-//                setpgrp();
-//                char cmd_temp[(cmd->cmd_line).length()];
-//                strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
-//                _removeBackgroundSign(cmd_temp);
-//                if (_isCharInComamnd(cmd_line, "&")){
-//                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_temp,1);
-//                    pipe->execute();
-//                }else {
-//                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
-//                    pipe->execute();
-//                }
-//
-//            }
-//            if (pid < 0) {
-//                perror("smash error: fork failed");
-//                return;
-//            } else {
-//                //TODO: DELETE THE WAIT AND ADD TO JOB LIST
-//                wait(nullptr);
-//            }
+            pid_t pid = fork();
+            if (pid == 0) {
+                setpgrp();
+                char cmd_temp[(cmd->cmd_line).length()];
+                strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
+                _removeBackgroundSign(cmd_temp);
+                if (_isCharInComamnd(cmd_temp, "&")){
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line,1);
+                    pipe->execute();
+                }else {
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
+                    pipe->execute();
+                }
+                exit(0);
+            }
+            if (pid < 0) {
+                perror("smash error: fork failed");
+                return true;
+            } else {
+                job_list->addJob(cmd_line,pid,BACKGROUND);
+            }
         } else {
             pid_t pid = fork();
             if (pid > 0) {
+                job_list->addJob(cmd_line,pid,FOREGROUND);
                 // smash waits for child
                 wait(nullptr);
             }
             if (pid < 0) {
                 perror("smash error: fork failed");
-                return;
+                return true;
             }
             if (pid == 0) {
                 setpgrp();
@@ -265,6 +267,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
                     shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
                     pipe->execute();
                 }
+                exit(0);
             }
         }
 
@@ -279,7 +282,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
             pid_t pid = fork();
             if (pid < 0) {
                 perror("smash error: fork failed");
-                return;
+                return true;
              }
             if (pid == 0) {
                 setpgrp();
@@ -301,7 +304,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
             pid_t pid = fork();
             if (pid < 0) {
                 perror("smash error: fork failed");
-                return;
+                return true;
             }
             if (pid == 0) {
                 setpgrp();
@@ -322,11 +325,21 @@ void SmallShell::executeCommand(const char *cmd_line) {
 
     }else {
         cmd->execute();
+
     }
+    string cmd_s = string(cmd_line);
+    if((cmd_s.find("quit") == 0)){
+        return false;
+    }
+    job_list->removeFinishedJobs();
+    job_list->updateJobsStatus();
+
+    return true;
 
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 
     //TODO: maybe need to check if wasnt added to job list?
+
 
 }
 
@@ -495,7 +508,12 @@ void PipeCommand::execute() {
         while(wait(NULL)>0);
     }
     else{
-        _parseCommandLineByChar(cmd_line, cmd_temp_array, '|');
+        char cmd_temp[(cmd_line).length()];
+        strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
+        if(_isCharInComamnd(cmd_temp, "&")) {
+            _removeChar(cmd_temp, '&');
+        }
+        _parseCommandLineByChar(cmd_temp, cmd_temp_array, '|');
         int fd[2];
         pipe(fd);
         pid_t child1 = fork();
@@ -565,6 +583,7 @@ void CopyCommand::execute() {
                 write(write_fd, buffer, count);
 
             }
+            cout <<"smash: "<< cmd_temp_array[1].c_str()<<  " was copied to "<< cmd_temp_array[2].c_str() << endl;
             close(write_fd);
             close(read_fd);
         }
@@ -572,12 +591,13 @@ void CopyCommand::execute() {
             perror("smash error: fork failed");
             return;
         } else {
-            //TODO: DELETE THE WAIT AND ADD TO JOB LIST
-            wait(nullptr);
+
+            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
         }
     } else {
         pid_t pid = fork();
         if (pid > 0) {
+            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,FOREGROUND);
             // smash waits for child
             wait(nullptr);
         }
@@ -609,6 +629,7 @@ void CopyCommand::execute() {
                 write(write_fd, buffer, count);
 
             }
+            cout <<"smash: "<< command[1].c_str()<< " was copied to "<< command[2].c_str() << endl;
             close(write_fd);
             close(read_fd);
         }
@@ -634,13 +655,14 @@ void ExternalCommand::execute() {
             perror("smash error: fork failed");
             return;
         } else {
-            //TODO: DELETE THE WAIT AND ADD TO JOB LIST
-            wait(nullptr);
+
+            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
         }
     } else {
         pid_t pid = fork();
         if (pid > 0) {
             // smash waits for child
+            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,FOREGROUND);
             wait(nullptr);
         }
         if (pid < 0) {
@@ -702,12 +724,13 @@ void JobsList::printJobsList() {
 
         cout << '[' << cur_job.getJobID() << ']' << ' '
              << cur_job.getInputCmd()
-             << " : " << cur_job.getJobPid() << " " << cur_job.getTime()
+             << " : " << to_string(cur_job.getJobPid()) << " " << to_string(cur_job.getTime())
              << " secs";
 
         if (cur_job.getJobStatus() == STOPPED) { cout << " (stopped)"; }
         cout << endl;
     }
+    return;
 }
 
 JobEntry* JobsList::getJobById(int jobId) {
@@ -780,7 +803,7 @@ bool KillCommand::checkArgInput() {
 
 
     int jobID = stoi(cmd_array[2]);
-    if(jobs->getJobById(jobID)){
+    if(jobs.getJobById(jobID)){
         cout << "smash error: kill: job-id " << jobID << " does not exist"
              << endl;
         return false;
@@ -795,13 +818,13 @@ void KillCommand::execute(){
 
     string* cmd_array = getCmdArray();
 
-    if(kill(jobs->getJobById(stoi(cmd_array[2]))->getJobPid(),
+    if(kill(jobs.getJobById(stoi(cmd_array[2]))->getJobPid(),
             stoi(cmd_array[1].substr(1, cmd_array[1].size()))) == -1){
         perror("smash error: kill failed");
         return;
     }
     cout << "signal number " << stoi(cmd_array[1].substr(1, cmd_array[1].size()))
-         << " was sent to pid " << jobs->getJobById(stoi(cmd_array[2]))->getJobPid()
+         << " was sent to pid " << jobs.getJobById(stoi(cmd_array[2]))->getJobPid()
          << endl;
     usleep(20000);
 
@@ -844,8 +867,9 @@ void JobEntry::changeLastStatusOfJob(JobStatus last_status) {
 
 void JobsList::removeJobById(int jobId) {
     vector<JobEntry>::iterator i_it = list_jobs.begin();
-    for(unsigned long j = 0; j < list_jobs.size(); j++){
+    for(unsigned int j = 0; j < list_jobs.size(); j++){
         if(i_it->getJobID() == jobId){
+            list_jobs.erase(i_it);
             break;
         } i_it++;
     }
@@ -861,13 +885,13 @@ bool ForegroundCommand::checkArgInput() {
         return false;
     }
     //check for empty job list and no arguments
-    JobEntry *temp_last_job = jobs->getLastJob();
+    JobEntry *temp_last_job = jobs.getLastJob();
     if ((num_arg == 1) && (!temp_last_job)) {
         cout << "smash error: fg: jobs list is empty" << endl;
         return false;
     }
     //check if the job exist
-    JobEntry *temp_job = jobs->getJobById(stoi(cmd_array[1]));
+    JobEntry *temp_job = jobs.getJobById(stoi(cmd_array[1]));
     if (temp_job == nullptr) {
         cout << "smash error: fg: job-id " << stoi(cmd_array[1])
              << " does not exist" << endl;
@@ -885,9 +909,9 @@ void ForegroundCommand::execute() {
     int num_arg = getNumOfArg();
 
     if (num_arg == 1) {
-        temp_job = jobs->getLastJob();
+        temp_job = jobs.getLastJob();
     } else {
-        temp_job = jobs->getJobById(stoi(cmd_array[1]));
+        temp_job = jobs.getJobById(stoi(cmd_array[1]));
     }
     string input_cmd = temp_job->getInputCmd();
     cout << input_cmd << " : " << temp_job->getJobPid() << endl;
@@ -903,7 +927,7 @@ void ForegroundCommand::execute() {
     waitpid(temp_job->getJobPid(),&check,WUNTRACED);//wait for the process to chage status
     if (WIFSTOPPED(check)) { return; } //wifdtopped check if stopped
 
-    jobs->removeJobById(temp_job->getJobID());
+    jobs.removeJobById(temp_job->getJobID());
 
 }
 
@@ -926,7 +950,7 @@ bool BackgroundCommand::checkArgInput() {
         cout << "smash error: bg: invalid arguments" << endl;
         return false;
     }
-    JobEntry* last_job_stop = jobs->getLastStoppedJob();
+    JobEntry* last_job_stop = jobs.getLastStoppedJob();
     if((num_arg == 1) && (last_job_stop == nullptr)){
         cout << "smash error: bg: there is no stopped jobs to resume" << endl;
         return false;
@@ -937,7 +961,7 @@ bool BackgroundCommand::checkArgInput() {
         cout << "smash error: bg: invalid arguments" << endl;
         return false;
     }
-    JobEntry* temp_job = jobs->getJobById(stoi(cmd_array[1]));
+    JobEntry* temp_job = jobs.getJobById(stoi(cmd_array[1]));
     if((num_arg == 2) && (temp_job == nullptr)){
         cout << "smash error: bg: job-id " << stoi(cmd_array[1])
              << " does not exist" << endl;
@@ -959,9 +983,9 @@ void BackgroundCommand::execute() {
     int num_arg = getNumOfArg();
     string *cmd_array = getCmdArray();
     if (num_arg == 1) {
-        temp_job = jobs->getLastStoppedJob();
+        temp_job = jobs.getLastStoppedJob();
     } else {
-        temp_job = jobs->getJobById(stoi(cmd_array[1]));
+        temp_job = jobs.getJobById(stoi(cmd_array[1]));
     }
 
     string input_cmd = temp_job->getInputCmd();
@@ -996,15 +1020,18 @@ void JobsList::removeFinishedJobs() {
 
     for(auto &cur_job : list_jobs){
         int flag_one = -1, flag_second = -1;
-        int job_pid = cur_job.getJobPid();
-
+        pid_t job_pid = cur_job.getJobPid();
+        bool job_terminated = false;
+        if(waitpid(job_pid,&flag_one,WNOHANG)==job_pid){
+             job_terminated = true;
+        }
         waitpid(job_pid,&flag_one,WNOHANG);
         bool job_signaled = WIFSIGNALED((flag_one));
-        waitpid(job_pid, &flag_second, WNOHANG);
-        bool job_terminated = WIFEXITED((flag_second));
+//        waitpid(job_pid, &flag_second, WNOHANG);
+//        bool job_terminated = WIFEXITED((flag_second));
 
         if(job_terminated || job_signaled){
-            jobs_id_finished[num_finished];
+            jobs_id_finished[num_finished] = cur_job.getJobID();
             num_finished +=1;
             to_remove = true;
         }
@@ -1057,3 +1084,14 @@ void JobsList::updateJobsStatus() {
 }
 
 
+JobEntry* JobsList::getJobWithStatusForegroind()  {
+
+    for(int i = 0; i < list_jobs.size(); i++){
+        JobStatus cur_status = list_jobs[i].getJobStatus();
+        if(cur_status == FOREGROUND){
+            int temp_jobID = list_jobs[i].getJobID();
+            return getJobById(temp_jobID);
+        }
+    }
+    return nullptr;
+}

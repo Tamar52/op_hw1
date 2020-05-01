@@ -8,22 +8,29 @@ using namespace std;
 
 void ctrlZHandler(int sig_num) {
     cout << "smash: got ctrl-Z\n";
-//    //TODO: DOSE THIS ONE EXIST? NEEDS TO BE IMPLEMENTED? add an if for no pid returned
-//    pid_t foreground_pid = getForgroundPid();
-//
-//    //TODO: should it really be with the kill function?
-//    kill(foreground_pid, SIGSTOP);
-//    cout << "smash: process"<< to_string(foreground_pid) << "was stopped\n";
+    JobEntry* cur_foreground_job = SmallShell::getInstance().get_job_list()->getJobWithStatusForegroind();
+    if(cur_foreground_job){
+        cur_foreground_job->changeLastStatusOfJob(FOREGROUND);
+        cur_foreground_job->changeStatusOfJob(STOPPED);
+        if(kill(cur_foreground_job->getJobPid(),SIGSTOP) == -1) {
+            perror("smash error: kill failed");
+            return;
+        }
+        //reset maybe time
+        cout << "smash: process"<< to_string(cur_foreground_job->getJobPid()) << "was stopped\n";
+    }
 }
 
 void ctrlCHandler(int sig_num) {
     cout << "smash: got ctrl-C\n";
-//    //TODO: DOSE THIS ONE EXIST? NEEDS TO BE IMPLEMENTED?add an if for no pid returned
-//    pid_t foreground_pid = getForgroundPid();
-//
-//    //TODO: should it really be with the kill function?
-//    kill(foreground_pid, SIGKILL);
-//    cout << "smash: process" << to_string(foreground_pid) << "was killed\n";
+    JobEntry* cur_foreground_job = SmallShell::getInstance().get_job_list()->getJobWithStatusForegroind();
+    if(cur_foreground_job){
+        if(kill(cur_foreground_job->getJobPid(), SIGINT) == -1){
+            perror("smash error: kill failed");
+            return;
+        }
+    }
+    cout << "smash: process" << to_string(cur_foreground_job->getJobPid()) << "was killed\n";
 }
 
 void alarmHandler(int sig_num) {
