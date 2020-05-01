@@ -23,6 +23,9 @@ int main(int argc, char* argv[]) {
         std::string cmd_line;
         std::getline(std::cin, cmd_line);
         smash.executeCommand(cmd_line.c_str());
+//        if(!(smash.executeCommand(cmd_line.c_str()))){ // to change the shell execute to bool
+//            break;
+//        }
     }
     return 0;
 }

@@ -9,6 +9,7 @@
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (21)
+#define PROCESS_MAX (100)
 
 
 extern std::string prompt_message;
@@ -110,103 +111,103 @@ public:
     bool checkArgInput()override ;
 };
 
-//class JobsList;
-//class QuitCommand : public BuiltInCommand {
-//// TODO: Add your data members public:
-//    JobsList* jobs;
-//public:
-//    QuitCommand(const char* cmd_line, JobsList* jobs) :
-//            BuiltInCommand(cmd_line),jobs(jobs){};
-//    virtual ~QuitCommand()  = default;
-//    void execute() override;
-//    bool checkArgInput();
-//};
+class JobsList;
+class QuitCommand : public BuiltInCommand {
+// TODO: Add your data members public:
+    JobsList* jobs;
+public:
+    QuitCommand(const char* cmd_line, JobsList* jobs) :
+            BuiltInCommand(cmd_line),jobs(jobs){};
+    virtual ~QuitCommand()  = default;
+    void execute() override;
+    bool checkArgInput();
+};
 
-//class JobEntry {
-//    // TODO: Add your data members
-//    int job_pid;
-//    int jobID; //sequence id
-//    JobStatus job_status;
-//    JobStatus last_status;
-//    string input_cmd;
-//    time_t job_time;
-//public:
-//    JobEntry(int job_pid, int jobID, JobStatus job_status,
-//             string input_cmd, time_t job_time) :
-//            job_pid(job_pid), jobID(jobID),job_status(job_status),
-//            input_cmd(input_cmd), job_time(job_time){ last_status = NONE; };
-//    int getJobID();
-//    int getJobPid();
-//    JobStatus getJobStatus();
-//    JobStatus getJobLastStatus();
-//    void changeStatusOfJob(JobStatus status);
-//    void changeLastStatusOfJob(JobStatus last_status);
-//    time_t getTime();
-//    void resetTime();
-//    string getInputCmd();
-//    ~JobEntry() = default;
-//};
-//
-//class JobsList {
-//    vector<JobEntry> list_jobs;
-//    // TODO: Add your data members
-//public:
-//    JobsList() = default;
-//    ~JobsList() = default;
-//    void addJob(string input_cmd, int job_pid, JobStatus job_status);
-//
-//
-//    void printJobsList();
-//    void killAllJobs();
-//    void removeFinishedJobs();
-//    JobEntry * getJobById(int jobId);
-//    void removeJobById(int jobId);
-//    JobEntry * getLastJob();
-//    JobEntry *getLastStoppedJob();
-//    // TODO: Add extra methods or modify exisitng ones as needed
-//};
-//
-//class JobsCommand : public BuiltInCommand {
-//    // TODO: Add your data members
-//    JobsList& jobs;
-//public:
-//    JobsCommand(const char* cmd_line, JobsList& jobs) : BuiltInCommand(cmd_line),jobs(jobs){};
-//    virtual ~JobsCommand() {}
-//    void execute() override;
-//    bool checkArgInput() override;
-//};
-//
-//class KillCommand : public BuiltInCommand {
-//    // TODO: Add your data members
-//    JobsList* jobs;
-//public:
-//    KillCommand(const char* cmd_line, JobsList* jobs) : BuiltInCommand(cmd_line), jobs(jobs){};
-//    virtual ~KillCommand() = default;
-//    void execute() override;
-//    bool checkArgInput() override;
-//};
-//
-//class ForegroundCommand : public BuiltInCommand {
-//    // TODO: Add your data members
-//    JobsList* jobs;
-//public:
-//    ForegroundCommand(const char* cmd_line, JobsList* jobs) :
-//            BuiltInCommand(cmd_line), jobs(jobs){};
-//    virtual ~ForegroundCommand() = default;
-//    void execute() override;
-//    bool checkArgInput();
-//};
-//
-//class BackgroundCommand : public BuiltInCommand {
-//    // TODO: Add your data members
-//    JobsList* jobs;
-//public:
-//    BackgroundCommand(const char* cmd_line, JobsList* jobs) :
-//            BuiltInCommand(cmd_line),jobs(jobs){};
-//    virtual ~BackgroundCommand() = default;
-//    void execute() override;
-//    bool checkArgInput();
-//};
+class JobEntry {
+    // TODO: Add your data members
+    int job_pid;
+    int jobID; //sequence id
+    JobStatus job_status;
+    JobStatus last_status;
+    string input_cmd;
+    time_t job_time;
+public:
+    JobEntry(int job_pid, int jobID, JobStatus job_status,
+             string input_cmd, time_t job_time) :
+            job_pid(job_pid), jobID(jobID),job_status(job_status),
+            input_cmd(input_cmd), job_time(job_time){ last_status = NONE; };
+    int getJobID();
+    int getJobPid();
+    JobStatus getJobStatus();
+    JobStatus getJobLastStatus();
+    void changeStatusOfJob(JobStatus status);
+    void changeLastStatusOfJob(JobStatus last_status);
+    time_t getTime();
+    void resetTime();
+    string getInputCmd();
+    ~JobEntry() = default;
+};
+
+class JobsList {
+    vector<JobEntry> list_jobs;
+    // TODO: Add your data members
+public:
+    JobsList() = default;
+    ~JobsList() = default;
+    void addJob(string input_cmd, int job_pid, JobStatus job_status);
+
+    void updateJobsStatus();
+    void printJobsList();
+    void killAllJobs();
+    void removeFinishedJobs();
+    JobEntry * getJobById(int jobId);
+    void removeJobById(int jobId);
+    JobEntry * getLastJob();
+    JobEntry *getLastStoppedJob();
+    // TODO: Add extra methods or modify exisitng ones as needed
+};
+
+class JobsCommand : public BuiltInCommand {
+    // TODO: Add your data members
+    JobsList& jobs;
+public:
+    JobsCommand(const char* cmd_line, JobsList& jobs) : BuiltInCommand(cmd_line),jobs(jobs){};
+    virtual ~JobsCommand() {}
+    void execute() override;
+    bool checkArgInput() override;
+};
+
+class KillCommand : public BuiltInCommand {
+    // TODO: Add your data members
+    JobsList* jobs;
+public:
+    KillCommand(const char* cmd_line, JobsList* jobs) : BuiltInCommand(cmd_line), jobs(jobs){};
+    virtual ~KillCommand() = default;
+    void execute() override;
+    bool checkArgInput() override;
+};
+
+class ForegroundCommand : public BuiltInCommand {
+    // TODO: Add your data members
+    JobsList* jobs;
+public:
+    ForegroundCommand(const char* cmd_line, JobsList* jobs) :
+            BuiltInCommand(cmd_line), jobs(jobs){};
+    virtual ~ForegroundCommand() = default;
+    void execute() override;
+    bool checkArgInput();
+};
+
+class BackgroundCommand : public BuiltInCommand {
+    // TODO: Add your data members
+    JobsList* jobs;
+public:
+    BackgroundCommand(const char* cmd_line, JobsList* jobs) :
+            BuiltInCommand(cmd_line),jobs(jobs){};
+    virtual ~BackgroundCommand() = default;
+    void execute() override;
+    bool checkArgInput();
+};
 
 // TODO: add more classes if needed
 // maybe chprompt , timeout ?
