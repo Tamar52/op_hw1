@@ -17,7 +17,7 @@ void ctrlZHandler(int sig_num) {
             return;
         }
         //reset maybe time
-        cout << "smash: process"<< to_string(cur_foreground_job->getJobPid()) << "was stopped\n";
+        cout << "smash: process"<< to_string(cur_foreground_job->getJobPid()) << "was stopped"<< endl;
     }
 }
 
@@ -30,7 +30,7 @@ void ctrlCHandler(int sig_num) {
             return;
         }
     }
-    cout << "smash: process" << to_string(cur_foreground_job->getJobPid()) << "was killed\n";
+    cout << "smash: process" << to_string(cur_foreground_job->getJobPid()) << "was killed"<< endl;
 }
 
 void alarmHandler(int sig_num) {

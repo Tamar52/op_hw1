@@ -22,12 +22,15 @@ class Command {
     string cmd_array[COMMAND_MAX_ARGS]; //array of the arg from cmd_line
 
 public:
+    void changeNumOfArg(int new_num_arg);
+    void changeCmdArray(string new_cmd_array[COMMAND_MAX_ARGS]);
     string cmd_line; // original cmd_line
     explicit Command(const char* cmd_line);
     virtual ~Command();
     virtual void execute() = 0;
     int getNumOfArg();
     string* getCmdArray();
+    Command(const Command & command) = default;
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
@@ -111,17 +114,10 @@ public:
     bool checkArgInput()override ;
 };
 
+
+
 class JobsList;
-class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
-    JobsList* jobs;
-public:
-    QuitCommand(const char* cmd_line, JobsList* jobs) :
-            BuiltInCommand(cmd_line),jobs(jobs){};
-    virtual ~QuitCommand()  = default;
-    void execute() override;
-    bool checkArgInput();
-};
+
 
 class JobEntry {
     // TODO: Add your data members
@@ -210,6 +206,17 @@ public:
     bool checkArgInput();
 };
 
+class QuitCommand : public BuiltInCommand {
+// TODO: Add your data members public:
+    JobsList jobs;
+public:
+    QuitCommand(const char* cmd_line, JobsList &jobs) :
+            BuiltInCommand(cmd_line),jobs(jobs){};
+    virtual ~QuitCommand()  = default;
+    void execute() override;
+    bool checkArgInput();
+};
+
 // TODO: add more classes if needed
 // maybe chprompt , timeout ?
 class ChpromptCommand : public BuiltInCommand {
@@ -225,12 +232,15 @@ private:
     // TODO: Add your data members
     shared_ptr<ChangeDirCommand> change_dir;
     shared_ptr<JobsList> job_list;
+    pid_t foreground_command;
 //    string cmd_name;
     SmallShell(){
           job_list = make_shared<JobsList>();
           change_dir = nullptr;
+          foreground_command = 0;
     }
 public:
+    void setForegrounfPid(pid_t pid){ foreground_command = pid;}
     std::shared_ptr<Command> CreateCommand(const char* cmd_line);
 
     SmallShell(SmallShell const&)      = delete; // disable copy ctor
