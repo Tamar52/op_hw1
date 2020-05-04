@@ -241,6 +241,7 @@ private:
     }
 public:
     void setForegrounfPid(pid_t pid){ foreground_command = pid;}
+    pid_t getForegrounfPid(){ return foreground_command;}
     std::shared_ptr<Command> CreateCommand(const char* cmd_line);
 
     SmallShell(SmallShell const&)      = delete; // disable copy ctor

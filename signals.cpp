@@ -8,29 +8,32 @@ using namespace std;
 
 void ctrlZHandler(int sig_num) {
     cout << "smash: got ctrl-Z\n";
-    JobEntry* cur_foreground_job = SmallShell::getInstance().get_job_list()->getJobWithStatusForegroind();
-    if(cur_foreground_job){
-        cur_foreground_job->changeLastStatusOfJob(FOREGROUND);
-        cur_foreground_job->changeStatusOfJob(STOPPED);
-        if(kill(cur_foreground_job->getJobPid(),SIGSTOP) == -1) {
-            perror("smash error: kill failed");
-            return;
-        }
-        //reset maybe time
-        cout << "smash: process"<< to_string(cur_foreground_job->getJobPid()) << "was stopped"<< endl;
+    pid_t foreground_pid = SmallShell::getInstance().getForegrounfPid();
+    if(foreground_pid == 0){
+        return;
     }
+    if(kill(foreground_pid,SIGSTOP) == -1) {
+        perror("smash error: kill failed");
+        return;
+    }
+        //reset maybe time
+         cout << "smash: process "<< to_string(foreground_pid) << " was stopped"<< endl;
+    SmallShell::getInstance().setForegrounfPid(0);
 }
+
 
 void ctrlCHandler(int sig_num) {
     cout << "smash: got ctrl-C\n";
-    JobEntry* cur_foreground_job = SmallShell::getInstance().get_job_list()->getJobWithStatusForegroind();
-    if(cur_foreground_job){
-        if(kill(cur_foreground_job->getJobPid(), SIGINT) == -1){
-            perror("smash error: kill failed");
-            return;
-        }
+    pid_t foreground_pid = SmallShell::getInstance().getForegrounfPid();
+    if(foreground_pid == 0){
+        return;
     }
-    cout << "smash: process" << to_string(cur_foreground_job->getJobPid()) << "was killed"<< endl;
+    if(kill(foreground_pid, SIGKILL) == -1){
+        perror("smash error: kill failed");
+        return;
+    }
+    cout << "smash: process " << to_string(foreground_pid) << " was killed"<< endl;
+    SmallShell::getInstance().setForegrounfPid(0);
 }
 
 void alarmHandler(int sig_num) {
