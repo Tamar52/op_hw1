@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 #include <memory>
-
-
+#include <unistd.h>
+#include <bits/stdc++.h>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (21)
 #define PROCESS_MAX (100)
@@ -52,22 +52,21 @@ public:
 
 class PipeCommand : public Command {
     int std_err_indicator;
+    bool is_background;
 public:
-    explicit PipeCommand(const char* cmd_line, int std_err): Command(cmd_line){
+    explicit PipeCommand(const char* cmd_line, int std_err, bool is_background): Command(cmd_line){
         std_err_indicator = std_err;
+        is_background = is_background;
     };
     ~PipeCommand() override = default;
     void execute() override;
 };
 
 class RedirectionCommand : public Command {
-    int sign;
-    string path;
-public:
-    RedirectionCommand(const char* cmd_line, int sign, basic_string<char>& path): Command(cmd_line), sign(sign), path(path)
-    {
+    bool is_background;
 
-    }
+public:
+    RedirectionCommand(const char* cmd_line, bool is_background): Command(cmd_line), is_background(is_background){}
     ~RedirectionCommand() override = default;
     void execute() override;
     //void prepare() override;
@@ -140,6 +139,7 @@ public:
     void changeLastStatusOfJob(JobStatus last_status);
 
     time_t getTime();
+    void setTime(time_t new_time);
     void resetTime();
     string getInputCmd();
     ~JobEntry() = default;
@@ -148,19 +148,28 @@ public:
 class JobsList {
     vector<JobEntry> list_jobs;
     // TODO: Add your data members
+    int next_job_id;
+    int next_kill = 0;
 public:
     JobsList() = default;
     ~JobsList() = default;
-    void addJob(string input_cmd, int job_pid, JobStatus job_status);
+    void addJob(string input_cmd, int job_pid, JobStatus job_status, int job_id);
+    void addJob(JobEntry job);
     JobEntry* getJobWithStatusForegroind();
     void updateJobsStatus();
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();
     JobEntry * getJobById(int jobId);
+    int getNextJobIdForKill();
     void removeJobById(int jobId);
+    void removeJobByPid(int pid);
     JobEntry * getLastJob();
     JobEntry *getLastStoppedJob();
+    void setNextId(int id);
+    int getNextId();
+    void setNextKill(int id);
+    int getNextKill();
     // TODO: Add extra methods or modify exisitng ones as needed
 };
 
@@ -233,15 +242,19 @@ private:
     shared_ptr<ChangeDirCommand> change_dir;
     shared_ptr<JobsList> job_list;
     pid_t foreground_command;
+    pid_t smash_pid;
 //    string cmd_name;
     SmallShell(){
           job_list = make_shared<JobsList>();
           change_dir = nullptr;
           foreground_command = 0;
+          setpgrp();
+          smash_pid = getpgrp();
     }
 public:
     void setForegrounfPid(pid_t pid){ foreground_command = pid;}
     pid_t getForegrounfPid(){ return foreground_command;}
+    pid_t getPid(){return smash_pid;}
     std::shared_ptr<Command> CreateCommand(const char* cmd_line);
 
     SmallShell(SmallShell const&)      = delete; // disable copy ctor

@@ -163,13 +163,39 @@ bool _isCharInComamnd(const char* cmd_line, const char* sign) {
     }
     return double_sign;
 }
+
+bool _isAppend(char* cmd_line){
+    const string str(cmd_line);
+    // find character
+    int double_sign =0;
+    unsigned int idx = str.find('>');
+    // if all characters are spaces then return
+    if (idx == string::npos) {
+        return false;
+    }
+    // if the command line does not end with & then return
+    if ((cmd_line[idx]) != '>') {
+        return false;
+    }
+    // replace the & (background sign) with space and then remove all tailing spaces.
+    cmd_line[idx] = ' ';
+
+    if ((cmd_line[idx+1]) == '>') {
+        return true;
+    }
+    return false;
+}
+
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 shared_ptr<Command> SmallShell::CreateCommand(const char* cmd_line) {
 
   string cmd_s = string(cmd_line);
-
+  size_t pos = cmd_s.find_first_not_of(" ");
+  if(pos != string::npos) {
+      cmd_s.erase(0, pos);
+  }
   if (cmd_s.find("chprompt") == 0) {
       return make_shared<ChpromptCommand>(cmd_line);
   }
@@ -230,15 +256,16 @@ bool SmallShell::executeCommand(const char *cmd_line) {
         if (_isBackgroundComamnd(cmd_line)) {
             pid_t pid = fork();
             if (pid == 0) {
-                setpgrp();
                 char cmd_temp[(cmd->cmd_line).length()];
                 strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
                 _removeBackgroundSign(cmd_temp);
-                if (_isCharInComamnd(cmd_temp, "&")){
-                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line,1);
+                if (_isCharInComamnd(cmd_temp, "&")) {
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 1, true);
+                    SmallShell::getInstance().setForegrounfPid(getppid());
                     pipe->execute();
-                }else {
-                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
+                } else {
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0, true);
+                    SmallShell::getInstance().setForegrounfPid(getppid());
                     pipe->execute();
                 }
                 exit(0);
@@ -247,7 +274,7 @@ bool SmallShell::executeCommand(const char *cmd_line) {
                 perror("smash error: fork failed");
                 return true;
             } else {
-                SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
+                SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, BACKGROUND, 0);
             }
         } else {
             pid_t pid = fork();
@@ -256,158 +283,173 @@ bool SmallShell::executeCommand(const char *cmd_line) {
                 return true;
             }
             if (pid == 0) {
-                setpgrp();
                 if (_isCharInComamnd(cmd_line, "&")) {
-                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 1);
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 1, false);
+                    SmallShell::getInstance().setForegrounfPid(getppid());
                     pipe->execute();
                 } else {
-                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0);
+                    shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0, false);
+                    SmallShell::getInstance().setForegrounfPid(getppid());
                     pipe->execute();
                 }
                 exit(0);
-            }else{
+            } else {
                 // smash waits for child
                 SmallShell::getInstance().setForegrounfPid(pid);
                 int status;
-                waitpid(pid,&status, WUNTRACED);
+                waitpid(pid, &status, WUNTRACED);
                 SmallShell::getInstance().setForegrounfPid(0);
-                if(WIFSTOPPED(status)){
-                    SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid, STOPPED);
+                if (WIFSTOPPED(status)) {
+                    SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED, 0);
                 }
             }
         }
-
     }else if (_isCharInComamnd(cmd->cmd_line.c_str(), ">")) {
-        if(_isBackgroundComamnd(cmd->cmd_line.c_str())){
-            char cmd_temp[(cmd->cmd_line).length()];
-            strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
-            _removeBackgroundSign(cmd_temp);
-            int indicator = _removeChar(cmd_temp, '>');
-            string cmd_temp_array[COMMAND_MAX_ARGS];
-            string input = devideCmdLine(cmd_temp);
-            int size = _parseCommandLine(input, cmd_temp_array);
-            if (indicator == 0){
-                pid_t pid = fork();
-                if (pid < 0) {
-                    perror("smash error: fork failed");
-                    return true;
-                }
-                if (pid == 0) {
-                    setpgrp();
-                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1, cmd_temp_array[size-1]);
-                    rd->execute();
-                    cmd_temp_array[size-1] = "&";
-                    cmd->changeCmdArray(cmd_temp_array);
-                    cmd->changeNumOfArg(size-1);
-                    string new_cmd = "";
-                    for (int i = 0; i < COMMAND_MAX_ARGS; ++i) {
-                        new_cmd = new_cmd +cmd_temp_array[i] + " ";
-                        if(cmd_temp_array[i] == " "){
-                            break;
-                        }
-                    }
-                    cmd->cmd_line = new_cmd;
-                    cmd->execute();
-                    exit(0);
-                } else {
-//                    SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
-                }
-
-            }else{
-                pid_t pid = fork();
-                if (pid < 0) {
-                    perror("smash error: fork failed");
-                    return true;
-                }
-                if (pid == 0) {
-                    setpgrp();
-                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2, cmd_temp_array[size-1]);
-                    rd->execute();
-                    cmd_temp_array[size-1] = "&";
-                    cmd->changeCmdArray(cmd_temp_array);
-                    cmd->changeNumOfArg(size-1);
-                    string new_cmd = "";
-                    for (int i = 0; i < COMMAND_MAX_ARGS; ++i) {
-                        new_cmd = new_cmd +cmd_temp_array[i] + " ";
-                        if(cmd_temp_array[i] == " "){
-                            break;
-                        }
-                    }
-                    cmd->cmd_line = new_cmd;
-                    cmd->execute();
-                    exit(0);
-                } else {
-//                    SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
-                }
-            }
+        if(_isBackgroundComamnd(cmd_line)){
+            shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(cmd_line,true);
+            rd->execute();
         }else {
-            char cmd_temp[(cmd->cmd_line).length()];
-            strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
-            int indicator = _removeChar(cmd_temp, '>');
-            string cmd_temp_array[COMMAND_MAX_ARGS];
-            string input = devideCmdLine(cmd_temp);
-            int size = _parseCommandLine(input, cmd_temp_array);
-            if (indicator == 0) {
-                pid_t pid = fork();
-                if (pid < 0) {
-                    perror("smash error: fork failed");
-                    return true;
-                }
-                if (pid == 0) {
-                    setpgrp();
-                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1,
-                                                                                        cmd_temp_array[size - 1]);
-                    rd->execute();
-                    string new_temp_array[COMMAND_MAX_ARGS];
-                    new_temp_array[0] = cmd_temp_array[0];
-                    cmd->changeCmdArray(new_temp_array);
-                    cmd->changeNumOfArg(size - 1);
-                    cmd->execute();
-                    exit(0);
-                } else {
-                    // smash waits for child
-                    SmallShell::getInstance().setForegrounfPid(pid);
-                    int status;
-                    waitpid(pid, &status, WUNTRACED);
-                    SmallShell::getInstance().setForegrounfPid(0);
-                    if (WIFSTOPPED(status)) {
-                        SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED);
-                    }
-                }
-
-            } else {
-                pid_t pid = fork();
-                if (pid < 0) {
-                    perror("smash error: fork failed");
-                    return true;
-                }
-                if (pid == 0) {
-                    setpgrp();
-                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2,
-                                                                                        cmd_temp_array[size - 1]);
-                    rd->execute();
-                    string new_temp_array[COMMAND_MAX_ARGS];
-                    new_temp_array[0] = cmd_temp_array[0];
-                    cmd->changeCmdArray(new_temp_array);
-                    cmd->changeNumOfArg(size - 1);
-                    cmd->execute();
-                    exit(0);
-                } else {
-                    // smash waits for child
-                    SmallShell::getInstance().setForegrounfPid(pid);
-                    int status;
-                    waitpid(pid, &status, WUNTRACED);
-                    SmallShell::getInstance().setForegrounfPid(0);
-                    if (WIFSTOPPED(status)) {
-                        SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED);
-                    }
-                }
-            }
+            shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(cmd_line,false);
+            rd->execute();
         }
+//    }else if (_isCharInComamnd(cmd->cmd_line.c_str(), ">")) {
+//        if(_isBackgroundComamnd(cmd->cmd_line.c_str())){
+//            char cmd_temp[(cmd->cmd_line).length()];
+//            strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
+//            _removeBackgroundSign(cmd_temp);
+//            int indicator = _removeChar(cmd_temp, '>');
+//            string cmd_temp_array[COMMAND_MAX_ARGS];
+//            string input = devideCmdLine(cmd_temp);
+//            int size = _parseCommandLine(input, cmd_temp_array);
+//            if (indicator == 0){
+//                pid_t pid = fork();
+//                if (pid < 0) {
+//                    perror("smash error: fork failed");
+//                    return true;
+//                }
+//                if (pid == 0) {
+//                    setpgrp();
+//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1, cmd_temp_array[size-1]);
+//                    rd->execute();
+//                    cmd_temp_array[size-1] = "&";
+//                    cmd->changeCmdArray(cmd_temp_array);
+//                    cmd->changeNumOfArg(size-1);
+//                    string new_cmd = "";
+//                    for (int i = 0; i < COMMAND_MAX_ARGS; ++i) {
+//                        new_cmd = new_cmd +cmd_temp_array[i] + " ";
+//                        if(cmd_temp_array[i] == " "){
+//                            break;
+//                        }
+//                    }
+//                    cmd->cmd_line = new_cmd;
+//                    SmallShell::getInstance().setForegrounfPid(getppid());
+//                    cmd->execute();
+//                    exit(0);
+//                } else {
+////                    SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
+//                }
+//
+//            }else{
+//                pid_t pid = fork();
+//                if (pid < 0) {
+//                    perror("smash error: fork failed");
+//                    return true;
+//                }
+//                if (pid == 0) {
+//                    setpgrp();
+//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2, cmd_temp_array[size-1]);
+//                    rd->execute();
+//                    cmd_temp_array[size-1] = "&";
+//                    cmd->changeCmdArray(cmd_temp_array);
+//                    cmd->changeNumOfArg(size-1);
+//                    string new_cmd = "";
+//                    for (int i = 0; i < COMMAND_MAX_ARGS; ++i) {
+//                        new_cmd = new_cmd +cmd_temp_array[i] + " ";
+//                        if(cmd_temp_array[i] == " "){
+//                            break;
+//                        }
+//                    }
+//                    cmd->cmd_line = new_cmd;
+//                    SmallShell::getInstance().setForegrounfPid(getppid());
+//                    cmd->execute();
+//                    exit(0);
+//                } else {
+////                    SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
+//                }
+//            }
+//        }else {
+//            char cmd_temp[(cmd->cmd_line).length()];
+//            strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
+//            int indicator = _removeChar(cmd_temp, '>');
+//            string cmd_temp_array[COMMAND_MAX_ARGS];
+//            string input = devideCmdLine(cmd_temp);
+//            int size = _parseCommandLine(input, cmd_temp_array);
+//            if (indicator == 0) {
+//                pid_t pid = fork();
+//                if (pid < 0) {
+//                    perror("smash error: fork failed");
+//                    return true;
+//                }
+//                if (pid == 0) {
+//                    setpgrp();
+//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1,
+//                                                                                        cmd_temp_array[size - 1]);
+//                    rd->execute();
+//                    string new_temp_array[COMMAND_MAX_ARGS];
+//                    new_temp_array[0] = cmd_temp_array[0];
+//                    cmd->changeCmdArray(new_temp_array);
+//                    cmd->changeNumOfArg(size - 1);
+//                    SmallShell::getInstance().setForegrounfPid(getppid());
+//                    cmd->execute();
+//                    exit(0);
+//                } else {
+//                    // smash waits for child
+//                    SmallShell::getInstance().setForegrounfPid(pid);
+//                    int status;
+//                    waitpid(pid, &status, WUNTRACED);
+//                    SmallShell::getInstance().setForegrounfPid(0);
+//                    if (WIFSTOPPED(status)) {
+//                        SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED, 0);
+//                    }
+//                }
+//
+//            } else {
+//                pid_t pid = fork();
+//                if (pid < 0) {
+//                    perror("smash error: fork failed");
+//                    return true;
+//                }
+//                if (pid == 0) {
+//                    setpgrp();
+//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2,
+//                                                                                        cmd_temp_array[size - 1]);
+//                    rd->execute();
+//                    string new_temp_array[COMMAND_MAX_ARGS];
+//                    new_temp_array[0] = cmd_temp_array[0];
+//                    cmd->changeCmdArray(new_temp_array);
+//                    cmd->changeNumOfArg(size - 1);
+//                    SmallShell::getInstance().setForegrounfPid(getppid());
+//                    cmd->execute();
+//                    exit(0);
+//                } else {
+//                    // smash waits for child
+//                    SmallShell::getInstance().setForegrounfPid(pid);
+//                    int status;
+//                    waitpid(pid, &status, WUNTRACED);
+//                    SmallShell::getInstance().setForegrounfPid(0);
+//                    if (WIFSTOPPED(status)) {
+//                        SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED,0);
+//                    }
+//                }
+//            }
+//        }
 
     }else {
+        if(SmallShell::getInstance().getForegrounfPid() == 0) {
+            SmallShell::getInstance().setForegrounfPid(getpid());
+        }
         cmd->execute();
-
+        SmallShell::getInstance().setForegrounfPid(0);
     }
     string cmd_s = string(cmd_line);
     if((cmd_s.find("quit") == 0)){
@@ -520,30 +562,98 @@ bool ShowPidCommand::checkArgInput() { return true; }
 
 //TODO: implement constructor and destructor
 void ShowPidCommand::execute() {
-    pid_t pid  = getpid();
+    pid_t pid = SmallShell::getInstance().getPid();
     string *command = getCmdArray();
     cout << "smash pid is " << to_string(pid) << endl;
 }
 
 //TODO: understand how to cast the string to char* for execv
 void RedirectionCommand::execute() {
-    if (sign == 1){
+//    if (sign == 1){
+//        close(1);
+//        mode_t mode = 0666;
+//        int write_fd = open(path.c_str(), O_WRONLY|O_TRUNC|O_CREAT, mode);
+//        if (write_fd == -1) { /* Check if file opened */
+//            perror("smash error: open failed");
+//            exit(0);
+//        }
+//    } else{
+//        close(1);
+//        mode_t mode = 0666;
+//        int write_fd = open(path.c_str(), O_WRONLY|O_APPEND|O_CREAT, mode);
+//        if (write_fd == -1) { /* Check if file opened */
+//            perror("smash error: open failed");
+//            exit(0);
+//        }
+//    }
+
+    string cmd_temp_array[COMMAND_MAX_ARGS];
+    char cmd_temp[(cmd_line).length()];
+    strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
+    if(is_background){
+        _removeBackgroundSign(cmd_temp);
+    }
+//    if(_isAppend(cmd_temp)){
+//        _parseCommandLineByChar(cmd_temp, cmd_temp_array,'>>');
+//    }else {
+
+        _parseCommandLineByChar(cmd_temp, cmd_temp_array, '>');
+//    }
+    int indicator = _removeChar(cmd_temp,'>');
+    int std_fd = dup(1);
+    int write_fd;
+    if (indicator == 0){
         close(1);
         mode_t mode = 0666;
-        int write_fd = open(path.c_str(), O_WRONLY|O_TRUNC|O_CREAT, mode);
+        string path[COMMAND_MAX_ARGS];
+        int j=0;
+        for (int i = 0; i <COMMAND_MAX_ARGS ; ++i) {
+            if(cmd_temp_array[i] != ""){
+                path[j] = cmd_temp_array[i];
+                j++;
+            }
+        }
+        size_t pos = path[1].find_first_not_of(" ");
+        if(pos != string::npos) {
+            path[1].erase(0, pos);
+        }
+        write_fd = open(path[1].c_str(), O_WRONLY|O_TRUNC|O_CREAT, mode);
         if (write_fd == -1) { /* Check if file opened */
             perror("smash error: open failed");
-            exit(0);
+            dup2(std_fd,1);
+            return;
         }
     } else{
         close(1);
         mode_t mode = 0666;
-        int write_fd = open(path.c_str(), O_WRONLY|O_APPEND|O_CREAT, mode);
+        string path[COMMAND_MAX_ARGS];
+        int j=0;
+        for (int i = 0; i <COMMAND_MAX_ARGS ; ++i) {
+            if(cmd_temp_array[i] != ""){
+                path[j] = cmd_temp_array[i];
+                j++;
+
+            }
+        }
+        size_t pos = path[1].find_first_not_of(" ");
+        if(pos != string::npos) {
+            path[1].erase(0, pos);
+        }
+        write_fd = open(path[1].c_str(), O_WRONLY|O_APPEND|O_CREAT, mode);
         if (write_fd == -1) { /* Check if file opened */
             perror("smash error: open failed");
-            exit(0);
+            dup2(std_fd,1);
+            return;
         }
     }
+    if(is_background){
+        cmd_temp_array[0] = cmd_temp_array[0] + "&";
+        SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
+    } else{
+        SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
+    }
+    close(write_fd);
+    dup2(std_fd,1);
 }
 
 
@@ -561,7 +671,6 @@ void ChpromptCommand::execute() {
 
 void PipeCommand::execute() {
     string cmd_temp_array[COMMAND_MAX_ARGS];
-
     if(std_err_indicator == 1){
         char cmd_temp[(cmd_line).length()];
         strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
@@ -576,10 +685,12 @@ void PipeCommand::execute() {
         }
         if (child1 == 0) {
             // first child
-            setpgrp();
             close(fd[0]);
             dup2(fd[1],2);
             close(fd[1]);
+            if(is_background){
+                cmd_temp_array[0] = cmd_temp_array[0] + "&";
+            }
             SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
             exit(0);
         }
@@ -591,10 +702,12 @@ void PipeCommand::execute() {
         }
         if (child2 == 0) {
             // second child
-            setpgrp();
             close(fd[1]);
             dup2(fd[0],0);
             close(fd[0]);
+            if(is_background){
+                cmd_temp_array[1] = cmd_temp_array[1] + "&";
+            }
             SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
             exit(0);
         }
@@ -602,6 +715,8 @@ void PipeCommand::execute() {
         close(fd[0]);
         close(fd[1]);
         while(wait(NULL)>0);
+        exit(0);
+
     }
     else{
         char cmd_temp[(cmd_line).length()];
@@ -622,6 +737,9 @@ void PipeCommand::execute() {
             close(fd[0]);
             dup2(fd[1],1);
             close(fd[1]);
+            if(is_background){
+                cmd_temp_array[0] = cmd_temp_array[0] + "&";
+            }
             SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
             exit(0);
         }
@@ -636,12 +754,16 @@ void PipeCommand::execute() {
             close(fd[1]);
             dup2(fd[0],0);
             close(fd[0]);
+            if(is_background){
+                cmd_temp_array[1] = cmd_temp_array[1] + "&";
+            }
             SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
             exit(0);
         }
         close(fd[0]);
         close(fd[1]);
         while(wait(NULL)>0);
+        exit(0);
     }
 }
 
@@ -696,7 +818,7 @@ void CopyCommand::execute() {
             return;
         } else {
 
-            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
+            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND, 0);
         }
     } else {
         pid_t pid = fork();
@@ -748,7 +870,7 @@ void CopyCommand::execute() {
             waitpid(pid,&status, WUNTRACED);
             SmallShell::getInstance().setForegrounfPid(0);
             if(WIFSTOPPED(status)){
-                SmallShell::getInstance().get_job_list()->addJob(cmd_temp,pid, STOPPED);
+                SmallShell::getInstance().get_job_list()->addJob(cmd_temp,pid, STOPPED, 0);
             }
         }
 
@@ -774,7 +896,7 @@ void ExternalCommand::execute() {
             return;
         } else {
 
-            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
+            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND,0);
 
         }
     } else {
@@ -798,7 +920,7 @@ void ExternalCommand::execute() {
             waitpid(pid,&status, WUNTRACED);
             SmallShell::getInstance().setForegrounfPid(0);
             if(WIFSTOPPED(status)){
-                SmallShell::getInstance().get_job_list()->addJob(cmd_temp,pid, STOPPED);
+                SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,STOPPED, 0);
             }
         }
 
@@ -826,23 +948,48 @@ void JobsCommand::execute() {
     jobs.printJobsList();
 }
 
+void JobsList::setNextId(int id) {
+    next_job_id = id;
+}
 
-void JobsList::addJob(string input_cmd, int job_pid, JobStatus job_status) {
+int JobsList::getNextId() {
+    return next_job_id;
+}
+void JobsList::addJob(string input_cmd, int job_pid, JobStatus job_status,int job_id) {
     int new_jobID;
-    if(list_jobs.empty()){
+    if(job_id != 0){
+        new_jobID = job_id;
+    }
+    else if (list_jobs.empty()) {
         new_jobID = 1;
     } else {
-        new_jobID = list_jobs.back().getJobID() + 1;
+        int max_id = 0;
+        for(auto &cur_job : list_jobs){
+            if(cur_job.getJobID() > max_id){
+                max_id = cur_job.getJobID();
+            }
+        }
+        new_jobID = max_id + 1;
     }
     time_t temp_time;
     time(&temp_time);
-    JobEntry new_job(job_pid,new_jobID,job_status,input_cmd,temp_time);
+    JobEntry new_job(job_pid, new_jobID, job_status, input_cmd, temp_time);
     list_jobs.push_back(new_job);
-
+//    SmallShell::getInstance().get_job_list()->setNextId(new_jobID + 1);
 }
+
+void JobsList::addJob(JobEntry job) {
+    job.setTime(time(NULL));
+    list_jobs.push_back(job);
+}
+
+bool cmpareJobs(JobEntry job1, JobEntry job2){
+    return job1.getJobID() < job2.getJobID();
+};
 
 //to check if print w.r.t
 void JobsList::printJobsList() {
+    sort(list_jobs.begin(), list_jobs.end(),cmpareJobs);
     for(auto &cur_job : list_jobs) {
         int cur_status = -1;
         JobStatus temp_s = cur_job.getJobStatus();
@@ -850,7 +997,7 @@ void JobsList::printJobsList() {
 
         cout << '[' << cur_job.getJobID() << ']' << ' '
              << cur_job.getInputCmd()
-             << " : " << to_string(cur_job.getJobPid()) << " " << to_string(cur_job.getTime())
+             << " : " << to_string(cur_job.getJobPid()) << " " << difftime(time(NULL), cur_job.getTime())
              << " secs";
 
         if (cur_job.getJobStatus() == STOPPED) { cout << " (stopped)"; }
@@ -862,7 +1009,7 @@ void JobsList::printJobsList() {
 JobEntry* JobsList::getJobById(int jobId) {
 
     for(auto &cur_job : list_jobs){
-        if(jobId == cur_job.getJobID()){
+        if( cur_job.getJobID() == jobId ){
             return &cur_job;
         }
     }
@@ -1009,6 +1156,9 @@ void JobEntry::changeLastStatusOfJob(JobStatus last_status) {
     this->last_status = last_status;
 }
 
+void JobEntry::setTime(time_t new_time) {
+    this->job_time = new_time;
+}
 
 void JobsList::removeJobById(int jobId) {
     vector<JobEntry>::iterator i_it = list_jobs.begin();
@@ -1016,10 +1166,20 @@ void JobsList::removeJobById(int jobId) {
         if(i_it->getJobID() == jobId){
             list_jobs.erase(i_it);
             break;
-        } i_it++;
+        }
+        i_it++;
     }
 }
-
+void JobsList::removeJobByPid(int pid) {
+    vector<JobEntry>::iterator i_it = list_jobs.begin();
+    for(unsigned long j = 0; j < list_jobs.size(); j++){
+        if(i_it->getJobPid() == pid){
+            list_jobs.erase(i_it);
+            break;
+        }
+        i_it++;
+    }
+}
 // to check if it is possible to get fg -3, means to get the job id
 // with the sign '-'
 bool ForegroundCommand::checkArgInput() {
@@ -1064,35 +1224,41 @@ bool ForegroundCommand::checkArgInput() {
 void ForegroundCommand::execute() {
 
     if (checkArgInput() == false) { return; }
-
-
     JobEntry *temp_job;
+
     string *cmd_array = getCmdArray();
     int num_arg = getNumOfArg();
 
     if (num_arg == 1) {
-        temp_job = jobs.getLastJob();
+        temp_job = SmallShell::getInstance().get_job_list()->getLastJob();
     } else {
-        temp_job = jobs.getJobById(stoi(cmd_array[1]));
+        temp_job = SmallShell::getInstance().get_job_list()->getJobById(stoi(cmd_array[1]));
+
     }
+    int job_pid = temp_job->getJobPid();
+    int job_id = temp_job->getJobID();
+    string cmd = temp_job->getInputCmd();
     string input_cmd = temp_job->getInputCmd();
     cout << input_cmd << " : " << temp_job->getJobPid() << endl;
     SmallShell::getInstance().setForegrounfPid(temp_job->getJobPid());
     JobStatus temp_old_status = temp_job->getJobStatus();
-//    temp_job->changeStatusOfJob(FOREGROUND);
-//    temp_job->changeLastStatusOfJob(temp_old_status);
     if (temp_old_status == STOPPED) {
         if (kill(temp_job->getJobPid(), SIGCONT) == -1) {
             perror("smash error: kill failed");
         }
-        int check = -1;
-        waitpid(temp_job->getJobPid(), &check, WUNTRACED);//wait for the process to chage statusdfgfg
-        if (WIFSTOPPED(check)) { return; } //wifdtopped check if stopped
-
-        jobs.removeJobById(temp_job->getJobID());
-
     }
+    int check = -1;
+    SmallShell::getInstance().setForegrounfPid(temp_job->getJobPid());
+    waitpid(temp_job->getJobPid(), &check, WUNTRACED);//wait for the process to chage statusdfgfg
+    if (WIFSTOPPED(check)) {
 
+        SmallShell::getInstance().get_job_list()->removeJobByPid(temp_job->getJobPid());
+        SmallShell::getInstance().get_job_list()->addJob(cmd, job_pid,STOPPED, job_id);
+        return;
+    } //wifdtopped check if stopped
+    else{
+        SmallShell::getInstance().get_job_list()->removeJobById(temp_job->getJobID());
+    }
 }
 
 JobEntry* JobsList::getLastStoppedJob() {
@@ -1189,6 +1355,13 @@ void QuitCommand::execute() {
     }
 }
 
+void JobsList::setNextKill(int id) {
+    next_kill = id;
+}
+
+int JobsList::getNextKill() {
+    return next_kill;
+}
 
 void JobsList::removeFinishedJobs() {
     int jobs_id_finished[PROCESS_MAX], num_finished = 0;
@@ -1218,9 +1391,17 @@ void JobsList::removeFinishedJobs() {
 
     if(to_remove){
         int i;
+        int max = 0;
         for(i = 0; i < num_finished; i++){
             int jobID_to_remove = jobs_id_finished[i];
+            if(jobID_to_remove > max){
+                max = jobID_to_remove;
+            }
             removeJobById(jobID_to_remove);
+        }
+        int kill_id = getNextKill();
+        if(max > getNextKill()){
+            setNextKill(max);
         }
     }
 }

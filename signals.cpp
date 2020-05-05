@@ -2,12 +2,14 @@
 #include <signal.h>
 #include "signals.h"
 #include "Commands.h"
-
+#include <unistd.h>
 
 using namespace std;
 
 void ctrlZHandler(int sig_num) {
-    cout << "smash: got ctrl-Z\n";
+    if(getpid() == SmallShell::getInstance().getPid()) {
+        cout << "smash: got ctrl-Z" << endl;
+    }
     pid_t foreground_pid = SmallShell::getInstance().getForegrounfPid();
     if(foreground_pid == 0){
         return;
@@ -17,13 +19,17 @@ void ctrlZHandler(int sig_num) {
         return;
     }
         //reset maybe time
-         cout << "smash: process "<< to_string(foreground_pid) << " was stopped"<< endl;
-    SmallShell::getInstance().setForegrounfPid(0);
+        if(getpid() == SmallShell::getInstance().getPid()) {
+            cout << "smash: process " << to_string(foreground_pid) << " was stopped" << endl;
+        }
+//    SmallShell::getInstance().setForegrounfPid(0);
 }
 
 
 void ctrlCHandler(int sig_num) {
-    cout << "smash: got ctrl-C\n";
+    if(getpid() == SmallShell::getInstance().getPid()) {
+        cout << "smash: got ctrl-C" << endl;
+    }
     pid_t foreground_pid = SmallShell::getInstance().getForegrounfPid();
     if(foreground_pid == 0){
         return;
@@ -32,12 +38,14 @@ void ctrlCHandler(int sig_num) {
         perror("smash error: kill failed");
         return;
     }
-    cout << "smash: process " << to_string(foreground_pid) << " was killed"<< endl;
-    SmallShell::getInstance().setForegrounfPid(0);
+    if(getpid() == SmallShell::getInstance().getPid()) {
+        cout << "smash: process " << to_string(foreground_pid) << " was killed" << endl;
+    }
+//    SmallShell::getInstance().setForegrounfPid(0);
 }
 
 void alarmHandler(int sig_num) {
-    cout << "smash got an alarm\n";
+    cout << "smash got an alarm"<< endl;
 
 //    //TODO: how can we find out who causes the alarm?
 //    command =
