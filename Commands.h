@@ -44,6 +44,7 @@ public:
 };
 
 class ExternalCommand : public Command {
+
 public:
     explicit ExternalCommand(const char* cmd_line): Command(cmd_line){};
     ~ExternalCommand() override = default;
@@ -243,6 +244,7 @@ private:
     shared_ptr<JobsList> job_list;
     pid_t foreground_command;
     pid_t smash_pid;
+    bool is_allready_fork;
 //    string cmd_name;
     SmallShell(){
           job_list = make_shared<JobsList>();
@@ -250,6 +252,7 @@ private:
           foreground_command = 0;
           setpgrp();
           smash_pid = getpgrp();
+          is_allready_fork = false;
     }
 public:
     void setForegrounfPid(pid_t pid){ foreground_command = pid;}
@@ -267,6 +270,8 @@ public:
     }
     shared_ptr<JobsList> get_job_list(){return job_list;};
     ~SmallShell(){}
+    void setIfFork(bool is_fork);
+    bool getIfFork();
     bool executeCommand(const char* cmd_line);
     // TODO: add extra methods as needed
 };

@@ -189,6 +189,8 @@ bool _isAppend(char* cmd_line){
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
+bool SmallShell::getIfFork() {return is_allready_fork;}
+void SmallShell::setIfFork(bool is_fork) { this->is_allready_fork = is_fork;}
 shared_ptr<Command> SmallShell::CreateCommand(const char* cmd_line) {
 
   string cmd_s = string(cmd_line);
@@ -262,11 +264,15 @@ bool SmallShell::executeCommand(const char *cmd_line) {
                 if (_isCharInComamnd(cmd_temp, "&")) {
                     shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 1, true);
                     SmallShell::getInstance().setForegrounfPid(getppid());
+                    SmallShell::getInstance().setIfFork(true);
                     pipe->execute();
+                    exit(0);
                 } else {
                     shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0, true);
                     SmallShell::getInstance().setForegrounfPid(getppid());
+                    SmallShell::getInstance().setIfFork(true);
                     pipe->execute();
+                    exit(0);
                 }
                 exit(0);
             }
@@ -275,6 +281,7 @@ bool SmallShell::executeCommand(const char *cmd_line) {
                 return true;
             } else {
                 SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, BACKGROUND, 0);
+                return true;
             }
         } else {
             pid_t pid = fork();
@@ -286,11 +293,15 @@ bool SmallShell::executeCommand(const char *cmd_line) {
                 if (_isCharInComamnd(cmd_line, "&")) {
                     shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 1, false);
                     SmallShell::getInstance().setForegrounfPid(getppid());
+                    SmallShell::getInstance().setIfFork(true);
                     pipe->execute();
+                    exit(0);
                 } else {
                     shared_ptr<PipeCommand> pipe = make_shared<PipeCommand>(cmd_line, 0, false);
                     SmallShell::getInstance().setForegrounfPid(getppid());
+                    SmallShell::getInstance().setIfFork(true);
                     pipe->execute();
+                    exit(0);
                 }
                 exit(0);
             } else {
@@ -312,137 +323,6 @@ bool SmallShell::executeCommand(const char *cmd_line) {
             shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(cmd_line,false);
             rd->execute();
         }
-//    }else if (_isCharInComamnd(cmd->cmd_line.c_str(), ">")) {
-//        if(_isBackgroundComamnd(cmd->cmd_line.c_str())){
-//            char cmd_temp[(cmd->cmd_line).length()];
-//            strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
-//            _removeBackgroundSign(cmd_temp);
-//            int indicator = _removeChar(cmd_temp, '>');
-//            string cmd_temp_array[COMMAND_MAX_ARGS];
-//            string input = devideCmdLine(cmd_temp);
-//            int size = _parseCommandLine(input, cmd_temp_array);
-//            if (indicator == 0){
-//                pid_t pid = fork();
-//                if (pid < 0) {
-//                    perror("smash error: fork failed");
-//                    return true;
-//                }
-//                if (pid == 0) {
-//                    setpgrp();
-//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1, cmd_temp_array[size-1]);
-//                    rd->execute();
-//                    cmd_temp_array[size-1] = "&";
-//                    cmd->changeCmdArray(cmd_temp_array);
-//                    cmd->changeNumOfArg(size-1);
-//                    string new_cmd = "";
-//                    for (int i = 0; i < COMMAND_MAX_ARGS; ++i) {
-//                        new_cmd = new_cmd +cmd_temp_array[i] + " ";
-//                        if(cmd_temp_array[i] == " "){
-//                            break;
-//                        }
-//                    }
-//                    cmd->cmd_line = new_cmd;
-//                    SmallShell::getInstance().setForegrounfPid(getppid());
-//                    cmd->execute();
-//                    exit(0);
-//                } else {
-////                    SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
-//                }
-//
-//            }else{
-//                pid_t pid = fork();
-//                if (pid < 0) {
-//                    perror("smash error: fork failed");
-//                    return true;
-//                }
-//                if (pid == 0) {
-//                    setpgrp();
-//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2, cmd_temp_array[size-1]);
-//                    rd->execute();
-//                    cmd_temp_array[size-1] = "&";
-//                    cmd->changeCmdArray(cmd_temp_array);
-//                    cmd->changeNumOfArg(size-1);
-//                    string new_cmd = "";
-//                    for (int i = 0; i < COMMAND_MAX_ARGS; ++i) {
-//                        new_cmd = new_cmd +cmd_temp_array[i] + " ";
-//                        if(cmd_temp_array[i] == " "){
-//                            break;
-//                        }
-//                    }
-//                    cmd->cmd_line = new_cmd;
-//                    SmallShell::getInstance().setForegrounfPid(getppid());
-//                    cmd->execute();
-//                    exit(0);
-//                } else {
-////                    SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND);
-//                }
-//            }
-//        }else {
-//            char cmd_temp[(cmd->cmd_line).length()];
-//            strcpy(reinterpret_cast<char *>(cmd_temp), cmd->cmd_line.c_str());
-//            int indicator = _removeChar(cmd_temp, '>');
-//            string cmd_temp_array[COMMAND_MAX_ARGS];
-//            string input = devideCmdLine(cmd_temp);
-//            int size = _parseCommandLine(input, cmd_temp_array);
-//            if (indicator == 0) {
-//                pid_t pid = fork();
-//                if (pid < 0) {
-//                    perror("smash error: fork failed");
-//                    return true;
-//                }
-//                if (pid == 0) {
-//                    setpgrp();
-//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 1,
-//                                                                                        cmd_temp_array[size - 1]);
-//                    rd->execute();
-//                    string new_temp_array[COMMAND_MAX_ARGS];
-//                    new_temp_array[0] = cmd_temp_array[0];
-//                    cmd->changeCmdArray(new_temp_array);
-//                    cmd->changeNumOfArg(size - 1);
-//                    SmallShell::getInstance().setForegrounfPid(getppid());
-//                    cmd->execute();
-//                    exit(0);
-//                } else {
-//                    // smash waits for child
-//                    SmallShell::getInstance().setForegrounfPid(pid);
-//                    int status;
-//                    waitpid(pid, &status, WUNTRACED);
-//                    SmallShell::getInstance().setForegrounfPid(0);
-//                    if (WIFSTOPPED(status)) {
-//                        SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED, 0);
-//                    }
-//                }
-//
-//            } else {
-//                pid_t pid = fork();
-//                if (pid < 0) {
-//                    perror("smash error: fork failed");
-//                    return true;
-//                }
-//                if (pid == 0) {
-//                    setpgrp();
-//                    shared_ptr<RedirectionCommand> rd = make_shared<RedirectionCommand>(" ", 2,
-//                                                                                        cmd_temp_array[size - 1]);
-//                    rd->execute();
-//                    string new_temp_array[COMMAND_MAX_ARGS];
-//                    new_temp_array[0] = cmd_temp_array[0];
-//                    cmd->changeCmdArray(new_temp_array);
-//                    cmd->changeNumOfArg(size - 1);
-//                    SmallShell::getInstance().setForegrounfPid(getppid());
-//                    cmd->execute();
-//                    exit(0);
-//                } else {
-//                    // smash waits for child
-//                    SmallShell::getInstance().setForegrounfPid(pid);
-//                    int status;
-//                    waitpid(pid, &status, WUNTRACED);
-//                    SmallShell::getInstance().setForegrounfPid(0);
-//                    if (WIFSTOPPED(status)) {
-//                        SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED,0);
-//                    }
-//                }
-//            }
-//        }
 
     }else {
         if(SmallShell::getInstance().getForegrounfPid() == 0) {
@@ -569,36 +449,13 @@ void ShowPidCommand::execute() {
 
 //TODO: understand how to cast the string to char* for execv
 void RedirectionCommand::execute() {
-//    if (sign == 1){
-//        close(1);
-//        mode_t mode = 0666;
-//        int write_fd = open(path.c_str(), O_WRONLY|O_TRUNC|O_CREAT, mode);
-//        if (write_fd == -1) { /* Check if file opened */
-//            perror("smash error: open failed");
-//            exit(0);
-//        }
-//    } else{
-//        close(1);
-//        mode_t mode = 0666;
-//        int write_fd = open(path.c_str(), O_WRONLY|O_APPEND|O_CREAT, mode);
-//        if (write_fd == -1) { /* Check if file opened */
-//            perror("smash error: open failed");
-//            exit(0);
-//        }
-//    }
-
     string cmd_temp_array[COMMAND_MAX_ARGS];
     char cmd_temp[(cmd_line).length()];
     strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
     if(is_background){
         _removeBackgroundSign(cmd_temp);
     }
-//    if(_isAppend(cmd_temp)){
-//        _parseCommandLineByChar(cmd_temp, cmd_temp_array,'>>');
-//    }else {
-
-        _parseCommandLineByChar(cmd_temp, cmd_temp_array, '>');
-//    }
+    _parseCommandLineByChar(cmd_temp, cmd_temp_array, '>');
     int indicator = _removeChar(cmd_temp,'>');
     int std_fd = dup(1);
     int write_fd;
@@ -616,6 +473,11 @@ void RedirectionCommand::execute() {
         size_t pos = path[1].find_first_not_of(" ");
         if(pos != string::npos) {
             path[1].erase(0, pos);
+        }
+        size_t pos_last = path[1].find_last_of(" ");
+        size_t first_pos = path[1].find_first_of(" ");
+        if(first_pos != string::npos) {
+            path[1].erase(first_pos, pos_last);
         }
         write_fd = open(path[1].c_str(), O_WRONLY|O_TRUNC|O_CREAT, mode);
         if (write_fd == -1) { /* Check if file opened */
@@ -638,6 +500,11 @@ void RedirectionCommand::execute() {
         size_t pos = path[1].find_first_not_of(" ");
         if(pos != string::npos) {
             path[1].erase(0, pos);
+        }
+        size_t pos_last = path[1].find_last_of(" ");
+        size_t first_pos = path[1].find_first_of(" ");
+        if(first_pos != string::npos) {
+            path[1].erase(first_pos, pos_last);
         }
         write_fd = open(path[1].c_str(), O_WRONLY|O_APPEND|O_CREAT, mode);
         if (write_fd == -1) { /* Check if file opened */
@@ -691,7 +558,9 @@ void PipeCommand::execute() {
             if(is_background){
                 cmd_temp_array[0] = cmd_temp_array[0] + "&";
             }
+            SmallShell::getInstance().setIfFork(true);
             SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
+
             exit(0);
         }
 
@@ -708,14 +577,16 @@ void PipeCommand::execute() {
             if(is_background){
                 cmd_temp_array[1] = cmd_temp_array[1] + "&";
             }
+            SmallShell::getInstance().setIfFork(true);
             SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
             exit(0);
         }
 
         close(fd[0]);
         close(fd[1]);
-        while(wait(NULL)>0);
+        while (wait(NULL) > 0);
         exit(0);
+
 
     }
     else{
@@ -740,6 +611,7 @@ void PipeCommand::execute() {
             if(is_background){
                 cmd_temp_array[0] = cmd_temp_array[0] + "&";
             }
+            SmallShell::getInstance().setIfFork(true);
             SmallShell::getInstance().executeCommand(cmd_temp_array[0].c_str());
             exit(0);
         }
@@ -757,13 +629,13 @@ void PipeCommand::execute() {
             if(is_background){
                 cmd_temp_array[1] = cmd_temp_array[1] + "&";
             }
+            SmallShell::getInstance().setIfFork(true);
             SmallShell::getInstance().executeCommand(cmd_temp_array[1].c_str());
             exit(0);
         }
         close(fd[0]);
         close(fd[1]);
-        while(wait(NULL)>0);
-        exit(0);
+        while (wait(NULL) > 0);
     }
 }
 
@@ -882,49 +754,57 @@ void CopyCommand::execute() {
 void ExternalCommand::execute() {
     char cmd_temp[(cmd_line).length()];
     strcpy(reinterpret_cast<char *>(cmd_temp), cmd_line.c_str());
-    if (_isBackgroundComamnd(cmd_line.c_str())) {
-        pid_t pid = fork();
-        if (pid == 0) {
-            setpgrp();
+    if (SmallShell::getInstance().getIfFork()) {
+        if (_isBackgroundComamnd(cmd_line.c_str())) {
             _removeBackgroundSign(cmd_temp);
-            char *char_array[] = {(char *) "/bin/bash", (char *) "-c", cmd_temp, NULL};
-            execv(char_array[0], char_array);
-            exit(0);
         }
-        if (pid < 0) {
-            perror("smash error: fork failed");
-            return;
-        } else {
-
-            SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,BACKGROUND,0);
-
-        }
+        char *char_array[] = {(char *) "/bin/bash", (char *) "-c", cmd_temp, NULL};
+        execv(char_array[0], char_array);
+        exit(0);
     } else {
-        pid_t pid = fork();
-
-        if (pid < 0) {
-            perror("smash error: fork failed");
-            return;
-        }
-        if (pid == 0) {
-            setpgrp();
-            char *char_array[] = {(char *) "/bin/bash", (char *) "-c", cmd_temp, NULL};
-            execv(char_array[0], char_array);
-            exit(0);
-        }
-        else{
-
-            // smash waits for child
-            SmallShell::getInstance().setForegrounfPid(pid);
-            int status;
-            waitpid(pid,&status, WUNTRACED);
-            SmallShell::getInstance().setForegrounfPid(0);
-            if(WIFSTOPPED(status)){
-                SmallShell::getInstance().get_job_list()->addJob(cmd_line,pid,STOPPED, 0);
+        if (_isBackgroundComamnd(cmd_line.c_str())) {
+            pid_t pid = fork();
+            if (pid == 0) {
+                setpgrp();
+                _removeBackgroundSign(cmd_temp);
+                char *char_array[] = {(char *) "/bin/bash", (char *) "-c", cmd_temp, NULL};
+                execv(char_array[0], char_array);
+                exit(0);
             }
+            if (pid < 0) {
+                perror("smash error: fork failed");
+                return;
+            } else {
+
+                SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, BACKGROUND, 0);
+
+            }
+        } else {
+            pid_t pid = fork();
+
+            if (pid < 0) {
+                perror("smash error: fork failed");
+                return;
+            }
+            if (pid == 0) {
+                setpgrp();
+                char *char_array[] = {(char *) "/bin/bash", (char *) "-c", cmd_temp, NULL};
+                execv(char_array[0], char_array);
+                exit(0);
+            } else {
+
+                // smash waits for child
+                SmallShell::getInstance().setForegrounfPid(pid);
+                int status;
+                waitpid(pid, &status, WUNTRACED);
+                SmallShell::getInstance().setForegrounfPid(0);
+                if (WIFSTOPPED(status)) {
+                    SmallShell::getInstance().get_job_list()->addJob(cmd_line, pid, STOPPED, 0);
+                }
+            }
+
+
         }
-
-
     }
 }
 
