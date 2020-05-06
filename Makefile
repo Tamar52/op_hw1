@@ -1,11 +1,12 @@
 #TODO: replace ID with your own IDS, for example: 123456789_123456789
-SUBMITTERS := <204861421>_<204512396>
+SUBMITTERS := 204861421_204512396
 COMPILER := g++
 COMPILER_FLAGS := --std=c++11 -Wall
 SRCS := Commands.cpp signals.cpp smash.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
 HDRS := Commands.h signals.h
-
+TESTS_INPUTS := $(wildcard test_input*.txt)
+TESTS_OUTPUTS := $(subst input,output,$(TESTS_INPUTS))
 SMASH_BIN := smash
 
 $(SMASH_BIN): $(OBJS)
@@ -13,7 +14,6 @@ $(SMASH_BIN): $(OBJS)
 
 $(OBJS): %.o: %.cpp
 	$(COMPILER) $(COMPILER_FLAGS) -c $^
-
 
 
 
