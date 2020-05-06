@@ -14,7 +14,12 @@ void ctrlZHandler(int sig_num) {
     if(foreground_pid == 0){
         return;
     }
-    if(kill(foreground_pid,SIGSTOP) == -1) {
+    if(SmallShell::getInstance().getPipe()){
+        if(killpg(foreground_pid,SIGSTOP) == -1) {
+            perror("smash error: kill failed");
+            return;
+        }
+    }else if(kill(foreground_pid,SIGSTOP) == -1) {
         perror("smash error: kill failed");
         return;
     }
@@ -34,7 +39,12 @@ void ctrlCHandler(int sig_num) {
     if(foreground_pid == 0){
         return;
     }
-    if(kill(foreground_pid, SIGKILL) == -1){
+    if(SmallShell::getInstance().getPipe()){
+        if(killpg(foreground_pid, SIGKILL) == -1){
+            perror("smash error: kill failed");
+            return;
+        }
+    }else if(kill(foreground_pid, SIGKILL) == -1){
         perror("smash error: kill failed");
         return;
     }

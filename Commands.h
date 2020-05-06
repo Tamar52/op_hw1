@@ -127,18 +127,19 @@ class JobEntry {
     JobStatus last_status;
     string input_cmd;
     time_t job_time;
+    bool pipe;
 public:
     JobEntry(int job_pid, int jobID, JobStatus job_status,
-             string input_cmd, time_t job_time) :
+             string input_cmd, time_t job_time, JobStatus last_status, bool pipe) :
             job_pid(job_pid), jobID(jobID),job_status(job_status),
-            input_cmd(input_cmd), job_time(job_time){ last_status = NONE; };
+            input_cmd(input_cmd), job_time(job_time),last_status(last_status), pipe(pipe) { };
     int getJobID();
     int getJobPid();
     JobStatus getJobStatus();
     JobStatus getJobLastStatus();
     void changeStatusOfJob(JobStatus status);
     void changeLastStatusOfJob(JobStatus last_status);
-
+    bool getPipe(){return pipe;}
     time_t getTime();
     void setTime(time_t new_time);
     void resetTime();
@@ -154,7 +155,7 @@ class JobsList {
 public:
     JobsList() = default;
     ~JobsList() = default;
-    void addJob(string input_cmd, int job_pid, JobStatus job_status, int job_id);
+    void addJob(string input_cmd, int job_pid, JobStatus job_status, int job_id, JobStatus last_status, bool pipe);
     void addJob(JobEntry job);
     JobEntry* getJobWithStatusForegroind();
     void updateJobsStatus();
@@ -162,6 +163,7 @@ public:
     void killAllJobs();
     void removeFinishedJobs();
     JobEntry * getJobById(int jobId);
+    int getMaxJovId();
     int getNextJobIdForKill();
     void removeJobById(int jobId);
     void removeJobByPid(int pid);
@@ -245,6 +247,7 @@ private:
     pid_t foreground_command;
     pid_t smash_pid;
     bool is_allready_fork;
+    bool pipe;
 //    string cmd_name;
     SmallShell(){
           job_list = make_shared<JobsList>();
@@ -253,11 +256,14 @@ private:
           setpgrp();
           smash_pid = getpgrp();
           is_allready_fork = false;
+          pipe = false;
     }
 public:
     void setForegrounfPid(pid_t pid){ foreground_command = pid;}
     pid_t getForegrounfPid(){ return foreground_command;}
     pid_t getPid(){return smash_pid;}
+    void setPipe(bool new_pipe){ this->pipe = new_pipe;}
+    bool getPipe(){ return pipe;}
     std::shared_ptr<Command> CreateCommand(const char* cmd_line);
 
     SmallShell(SmallShell const&)      = delete; // disable copy ctor
