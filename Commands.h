@@ -130,19 +130,15 @@ class JobEntry {
     bool pipe;
 public:
     JobEntry(int job_pid, int jobID, JobStatus job_status,
-             string input_cmd, time_t job_time, JobStatus last_status, bool pipe) :
+             JobStatus last_status, string input_cmd, time_t job_time, bool pipe) :
             job_pid(job_pid), jobID(jobID),job_status(job_status),
-            input_cmd(input_cmd), job_time(job_time),last_status(last_status), pipe(pipe) { };
+            last_status(last_status), input_cmd(input_cmd), job_time(job_time), pipe(pipe) { };
     int getJobID();
     int getJobPid();
     JobStatus getJobStatus();
-    JobStatus getJobLastStatus();
-    void changeStatusOfJob(JobStatus status);
     void changeLastStatusOfJob(JobStatus last_status);
     bool getPipe(){return pipe;}
     time_t getTime();
-    void setTime(time_t new_time);
-    void resetTime();
     string getInputCmd();
     ~JobEntry() = default;
 };

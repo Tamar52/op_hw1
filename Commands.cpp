@@ -829,7 +829,6 @@ string JobEntry::getInputCmd() { return input_cmd; }
 
 JobStatus JobEntry::getJobStatus() { return  job_status; }
 
-JobStatus JobEntry::getJobLastStatus() { return last_status; }
 
 bool JobsCommand::checkArgInput() { return true; }
 
@@ -865,7 +864,7 @@ void JobsList::addJob(string input_cmd, int job_pid, JobStatus job_status,int jo
     }
     time_t temp_time;
     time(&temp_time);
-    JobEntry new_job(job_pid, new_jobID, job_status, input_cmd, temp_time,  last_status, pipe);
+    JobEntry new_job(job_pid, new_jobID, job_status, last_status, input_cmd, temp_time,  pipe);
     list_jobs.push_back(new_job);
 //    SmallShell::getInstance().get_job_list()->setNextId(new_jobID + 1);
 }
@@ -1032,17 +1031,11 @@ JobEntry* JobsList::getLastJob(){
     return  getJobById(list_jobs.back().getJobID());
 }
 
-void JobEntry::changeStatusOfJob(JobStatus status) {
-    this->job_status = status;
-}
 
 void JobEntry::changeLastStatusOfJob(JobStatus last_status) {
     this->last_status = last_status;
 }
 
-void JobEntry::setTime(time_t new_time) {
-    this->job_time = new_time;
-}
 
 void JobsList::removeJobById(int jobId) {
     vector<JobEntry>::iterator i_it = list_jobs.begin();
